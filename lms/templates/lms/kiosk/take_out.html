@@ -1,0 +1,56 @@
+{% extends "lms/base.html" %}
+
+{% load static %}
+
+{% block title %}KIOSK | Take out book{% endblock %}
+
+{% block body %}
+    {% include "lms/kiosk/navbar.html" with home_button=True %}
+
+    <main x-data="{accessionCode: ''}" class="container pt-4 mt-5">
+        <h1>Take out a book</h1>
+        <div class="border border-primary rounded p-4">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="book-field" class="form-label fs-4">Accession code</label>
+                    <input type="text" x-model="accessionCode"
+                           class="form-control form-control-lg {{ form.book.errors|length_is:"0"|yesno:",is-invalid" }}"
+                           name="book" id="book-field" placeholder="e.g. 927392" required autofocus>
+                    <div class="invalid-feedback">{% for error in form.book.errors %}{{ error }} {% endfor %}</div>
+                </div>
+                {% if form.non_field_errors %}
+                    {% for error in form.non_field_errors %}
+                        <div class="alert alert-danger">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+                <div @qr-code-scanned="accessionCode = $event.detail.data"
+                     class="d-flex gap-2 w-100">
+                    {% include "lms/components/qr_code_scanner.html" %}
+                    <button class="btn btn-primary btn-lg w-100">Take out loan</button>
+                </div>
+            </form>
+        </div>
+        {% for message in messages %}
+            {% if "loan_confirmation" in message.extra_tags %}
+                <div x-data="{{ message }}"
+                     class="alert alert-success p-4 mt-3">
+                    <h4 class="alert-heading">Loan created successfully!</h4>
+                    <span>Title: <span x-text="title"></span></span><br>
+                    <span>Due date: <span x-text="due_date"></span></span><br>
+                    <span>0 out of <span x-text="renewals_allowed"></span> renewals used</span>
+                </div>
+            {% else %}
+                <div class="alert alert-dismissible fade show {% if message.tags == "success" %}alert-success{% else %}alert-danger{% endif %} mt-3">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </main>
+
+{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="{% static 'lms/css/kiosk.css' %}"/>
+{% endblock %}

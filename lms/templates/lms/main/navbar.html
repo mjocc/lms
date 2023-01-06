@@ -1,0 +1,62 @@
+{% comment %}
+Params:
+  active (string?) - name of active page (signup, )
+{% endcomment %}
+
+{% load static %}
+
+<nav class="navbar navbar-expand-md bg-primary navbar-dark sticky-top">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <img src="{% static 'lms/logo-light.svg' %}" alt="Logo" width="30" height="24"
+                 class="d-inline-block align-text-top">
+            LibraryName
+        </a>
+        {% if user.is_authenticated %}
+            <div class="position-relative">
+                <a href="#" style="width: 30px; fill: white; cursor: pointer;" id="navbar-user-dropdown-button"
+                   role="button" title="Account options"
+                   data-bs-toggle="dropdown" aria-expanded="false"
+                   class="navbar-text d-inline-block dropdown-toggle">{% include 'lms/svgs/user.svg' %}</a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbar-user-dropdown-button">
+                    <li><a class="dropdown-item {% if active == "profile" %}active{% endif %}" href="{% url 'user_profile' %}">Profile</a></li>
+                    <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+                </ul>
+            </div>
+        {% else %}
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link {% if active == "signup" %}active{% endif %}" href="{% url 'register' %}">Sign
+                        up</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbar-login-dropdown-button" role="button"
+                       data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="false">
+                        Login
+                    </a>
+                    <div style="width:250px;" class="dropdown-menu dropdown-menu-end p-4"
+                         aria-labelledby="navbar-login-dropdown-button">
+                        <form action="{% url 'login' %}" method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="login-form-number" class="form-label">Library card number</label>
+                                <input name="username" required type="text" minlength="10" maxlength="10"
+                                       class="form-control"
+                                       id="login-form-number">
+                            </div>
+                            <div class="mb-3">
+                                <label for="login-form-password" class="form-label">PIN</label>
+                                <input name="password" required type="password" minlength="4" maxlength="6"
+                                       class="form-control"
+                                       id="login-form-password">
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Sign in</button>
+                        </form>
+                    </div>
+                </li>
+            </ul>
+        {% endif %}
+
+
+    </div>
+</nav>

@@ -1,0 +1,54 @@
+{% load static %}
+
+<div x-data="{ qrScanner: null, modal: null, get active() { return this.qrScanner?._active } }">
+    <button type="button" @click="qrScanner.start()"
+            class="btn btn-primary d-flex justify-content-center align-items-center"
+            style="height: 50px" data-bs-toggle="modal" data-bs-target="#qrScanModal" title="Scan QR code">
+            {% include 'lms/svgs/qrcode.svg' %}
+    </button>
+
+    <div id="qrScanModal" x-init="modal = new bootstrap.Modal($el)" @hidden-bs-modal.dot="qrScanner.stop()"
+         class="modal fade" tabindex="-1"
+         aria-labelledby="qrScanModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-4" id="qrScanModeLabel">Scan QR code</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body d-flex justify-content-center">
+                    <div id="video-container" class="card w-100">
+                        <div class="position-absolute w-100 h-100 d-flex justify-content-center align-items-center">
+                            <div class="spinner-grow text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                        <video x-init="qrScanner = new QrScanner(
+                        $el,
+                        result =>  { $dispatch('qr-code-scanned', result); modal.hide() },
+                        { highlightScanRegion: true },
+                    );"></video>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #video-container {
+        position: relative;
+        width: max-content;
+        height: max-content;
+        overflow: hidden;
+    }
+
+    #video-container .scan-region-highlight {
+        border-radius: 30px;
+        outline: rgba(0, 0, 0, .25) solid 50vmax;
+    }
+
+    #video-container .scan-region-highlight-svg {
+        display: none;
+    }
+</style>

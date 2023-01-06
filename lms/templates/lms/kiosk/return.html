@@ -1,0 +1,31 @@
+{% extends "lms/base.html" %}
+
+{% load static %}
+
+{% block title %}KIOSK | Return "{{ loan.book.book.title }}"{% endblock %}
+
+{% block body %}
+    {% include "lms/kiosk/navbar.html" with home_button=True %}
+
+    <main class="container pt-4 mt-5">
+        <h1>Return a book</h1>
+        <div class="d-flex justify-content-center">
+            {% include "lms/components/book_card.html" with book=loan.book.book %}
+        </div>
+        <div class="border border-danger rounded p-4 mt-3">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <h3 class="pb-2">Is this the correct book to return?</h3>
+                <button class="btn btn-danger btn-lg w-100" autofocus>Confirm return</button>
+            </form>
+        </div>
+    </main>
+
+    {% for error in form.non_field_errors %}
+        <div class="alert alert-danger mt-3">{{ message }}</div>
+    {% endfor %}
+{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="{% static 'lms/css/kiosk.css' %}"/>
+{% endblock %}

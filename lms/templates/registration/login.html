@@ -1,0 +1,74 @@
+{% extends "lms/base.html" %}
+{% load widget_tweaks %}
+
+{% load static %}
+
+{% block title %}Login | LibraryName{% endblock title %}
+
+{% block head %}
+    <style>
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            padding-top: 40px;
+            padding-bottom: 40px;
+            background-color: #f5f5f5;
+        }
+
+        .form-signin {
+            max-width: 330px;
+            padding: 15px;
+        }
+
+        .form-signin .form-floating:focus-within {
+            z-index: 2;
+        }
+
+        .form-signin input[type="text"] {
+            margin-bottom: -1px;
+            border-bottom-right-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+
+        .form-signin input[type="password"] {
+            margin-bottom: 10px;
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+        }
+    </style>
+{% endblock %}
+
+{% block body_class %}text-center{% endblock %}
+
+{% block body %}
+    <main class="form-signin w-100 m-auto">
+        <form class="needs-validation" method="post" novalidate>
+            {% csrf_token %}
+
+            <img class="mb-4" src="{% static 'lms/logo.svg' %}" alt="LMS logo" width="72" height="57">
+            <h1 class="h3 mb-3 fw-normal">Please sign in</h1>
+
+            <div class="form-floating">
+                {{ form.username|attr:"placeholder:Library card number"|add_class:"form-control" }}
+                <label for="id_username">Library card number</label>
+            </div>
+            <div class="form-floating mb-1">
+                {{ form.password|attr:"placeholder:PIN"|attr:"minlength:4"|attr:"maxlength:6"|add_class:"form-control" }}
+                <label for="id_password">PIN</label>
+            </div>
+{# TODO: add password reset link to both this and navbar dropdown form then set up password reset and password change pages using django auth views#}
+            {% if form.non_field_errors %}
+                {% for error in form.non_field_errors %}
+                    <div class="alert alert-danger">{{ error }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <button class="mt-1 w-100 btn btn-lg btn-primary" type="submit">Sign in</button>
+        </form>
+    </main>
+{% endblock %}

@@ -1,0 +1,208 @@
+{% extends "lms/base.html" %}
+
+{% block title %}Import book | LMS{% endblock %}
+
+{% load static %}
+
+{% block body %}
+    <main class="container pt-5" x-data="createState()">
+        <img class="mb-2" src="{% static 'lms/logo.svg' %}" alt="LMS logo" width="72" height="57">
+        <h1 class="mb-3">Import books by ISBN</h1>
+
+        <div class="d-flex gap-3">
+            <div style="flex: 0 0 20%;">
+                <div class="nav flex-column nav-fill nav-pills mb-3">
+                    <button class="nav-link active" data-bs-toggle="tab" aria-selected="true"
+                            @click="createCopies = true">
+                        Create book copies
+                    </button>
+                    <button class="nav-link" id="book-tab" data-bs-toggle="tab" aria-selected="false"
+                            @click="createCopies = false">
+                        Create books
+                    </button>
+                </div>
+            </div>
+
+            <form method="post" @submit.prevent="sendForm($el)">
+                {% csrf_token %}
+
+                <table class="table" style="table-layout: fixed">
+                    <thead>
+                    <tr>
+                        <th scope="col">ISBN</th>
+                        <template x-if="createCopies">
+                            <th scope="col">Accession code(s) (single or comma-separated list)</th>
+                        </template>
+                        <template x-if="errors > 0">
+                            <th scope="col" class="w-25">Action</th>
+                        </template>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <template x-for="field in fields">
+                        <tr>
+                            <td>
+                                <input aria-label="ISBN" class="form-control"
+                                       placeholder="ISBN" type="text" x-model="field.isbn"
+                                       :class="field.error ? 'is-invalid' : ''"
+                                       minlength="7" maxlength="20" required>
+                                <div x-show="field.error === 'APINotFoundError'" class="invalid-feedback">
+                                    Book could not be automatically imported. Check it has been typed correctly or
+                                    create it manually.
+                                </div>
+                            </td>
+
+                            <template x-if="createCopies">
+                                <td>
+                                    <input aria-label="Accession code" type="text" class="form-control"
+                                           placeholder="Accession code"
+                                           :class="field.error ? 'is-invalid' : ''"
+                                           x-model="field.accession" required>
+                                    <div x-show="field.error === 'ObjectExistsError'" class="invalid-feedback">
+                                        Book with this accession code already exists.
+                                    </div>
+                                </td>
+                            </template>
+
+                            <template x-if="errors > 0">
+                                <td>
+                                    <template x-if="field.error === 'APINotFoundError'">
+                                        <a :href="createCopies ? '{% url 'admin:lms_bookcopy_add' %}' :
+                                                    '{% url 'admin:lms_book_add' %}'"
+                                           class="btn btn-primary">Create book manually</a>
+                                    </template>
+                                </td>
+                            </template>
+                        </tr>
+                    </template>
+                    </tbody>
+                </table>
+
+                <div class="d-flex mt-1 gap-2">
+                    <button class="w-100 btn btn-primary d-flex gap-2 justify-content-center align-items-center"
+                            type="submit" :disabled="loading">
+                        <span x-cloak x-show="loading"
+                              class="spinner-border spinner-border-sm"
+                              role="status" aria-hidden="true"></span>
+                        Import book(s)
+                    </button>
+                    <div class="btn-group">
+                        <button title="Add row" type="button" @click="addField"
+                                class="btn btn-outline-secondary hover-white d-flex justify-content-center align-items-center">
+                            {% include 'lms/svgs/plus.svg' %}
+                        </button>
+                        <button title="Remove row" type="button" :disabled="fields.length === 1" @click="removeField"
+                                class="btn btn-outline-secondary hover-white d-flex justify-content-center align-items-center">
+                            {% include 'lms/svgs/minus.svg' %}
+                        </button>
+                    </div>
+                    <button class="btn btn-outline-secondary" type="button" title="Reset form" @click="resetFields"
+                            :disabled="fields.length === 1 && fields[0].isbn === '' && fields[0].accession === '' && fields[0].error === null">
+                        Reset
+                    </button>
+                </div>
+
+                <div x-cloak x-show=" successes?.book_data?.length> 0" class="card mt-4 p-4">
+                    <div class="d-flex justify-content-between">
+                        <h3 class="margin-top: -5px">Books created:</h3>
+                        <button type="button" class="btn-close" @click="successes = null"
+                                aria-label="Close"></button>
+                    </div>
+                    <table class="table" style="table-layout: fixed">
+                        <thead>
+                        <tr>
+                            <th scope="col" style="width: 145px">ISBN</th>
+                            <th scope="col">Title</th>
+                            <th scope="col">Authors</th>
+                            <template x-if="successes?.includes_accessions">
+                                <th scope="col">Accession code</th>
+                            </template>
+                            <th scope="col" style="width: 130px">Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <template x-for="book in successes?.book_data">
+                            <tr class="align-middle">
+                                <td><span x-text="book.isbn" :title="book.isbn"></span></td>
+                                <td><span class="d-inline-block text-truncate mw-100" x-text="book.title"
+                                          :title="book.title"></span></td>
+                                <td><span class="d-inline-block text-truncate mw-100" x-text="book.authors"
+                                          :title="book.authors"></span></td>
+                                <template x-if="successes.includes_accessions">
+                                    <td><span class="d-inline-block text-truncate mw-100" x-text="book?.accession"
+                                              :title="book?.accession"></span></td>
+                                </template>
+                                <td>
+                                    <a :href="book.admin_url" class="btn btn-sm btn-primary">View book data</a>
+                                </td>
+                            </tr>
+                        </template>
+                        </tbody>
+                    </table>
+                </div>
+            </form>
+        </div>
+        <div x-cloak x-transition x-show="serverError" class="alert alert-danger mt-4">Something went
+            wrong. Please try again, making sure you haven't included any letters or symbols in your ISBNs/accession
+            codes.
+            <button type="button" class="btn-close float-end" aria-label="Close"
+                    @click="serverError = false"></button>
+        </div>
+    </main>
+{% endblock %}
+
+{% block script %}
+    <script>
+        const createState = () => ({
+            createCopies: true,
+            serverError: false,
+            loading: false,
+            numRows: 1,
+            fields: [{isbn: "", accession: "", error: null}],
+            addField() {
+                this.fields.push({isbn: "", accession: "", error: null});
+            },
+            removeField() {
+                this.fields.pop();
+            },
+            resetFields() {
+                this.fields = [{isbn: "", accession: "", error: null}];
+                this.errors = 0;
+                this.serverError = false;
+            },
+            errors: 0,
+            successes: null,
+            async sendForm(form) {
+                if (form.checkValidity()) {
+                    try {
+                        this.loading = true;
+                        this.serverError = false;
+                        let response = await fetch(form.action, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
+                            },
+                            body: JSON.stringify({
+                                "fields": this.fields,
+                                "include_accessions": this.createCopies,
+                            })
+                        });
+                        let resData = await response.json();
+                        this.successes = resData.successes;
+                        this.errors = resData.errors.length;
+                        if (this.errors) {
+                            this.fields = resData.errors;
+                        } else {
+                            this.resetFields();
+                        }
+                    } catch {
+                        this.serverError = true;
+                    }
+                    this.loading = false;
+                }
+            }
+        })
+    </script>
+{% endblock %}

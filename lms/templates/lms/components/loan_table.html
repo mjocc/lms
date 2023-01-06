@@ -1,0 +1,35 @@
+{% comment %}
+Params:
+  loans (Loan[]) - loans to be rendered
+{% endcomment %}
+{% load static %}
+
+<table class="table table-hover">
+    <thead>
+    <tr class="border-bottom border-dark">
+        <th scope="col">#</th>
+
+        <th scope="col">Title</th>
+        <th scope="col">Authors</th>
+
+        <th scope="col" style="min-width: 110px">Due date</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for loan in loans %}
+        <tr @click="$dispatch('loan-row-click', { accessionCode: {{ loan.book.accession_code }} })"
+            :class="accessionCode == {{ loan.book.accession_code }} ? 'table-active' : ''">
+            <th scope="row">{{ loan.book.accession_code }}</th>
+
+            <td>{{ loan.book.book.title }}</td>
+            <td>{{ loan.book.book.authors_name_string }}</td>
+
+            <td>{{ loan.due_date }}</td>
+        </tr>
+    {% empty %}
+        <tr>
+            <th class="text-center fst-italic fw-normal" colspan="4" style="pointer-events: none;">No books taken out</th>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>

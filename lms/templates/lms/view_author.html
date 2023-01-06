@@ -1,0 +1,10 @@
+{% extends "lms/base.html" %}
+
+{% block title %}{{ author.name }}{% endblock %}
+
+{% block main %}
+    <h3>{{ author.name }}</h3>
+    {% for book in author.books.all %}
+        {% include "lms/components/book_card.html" with no_cover_image=True %}
+    {% endfor %}
+{% endblock %}

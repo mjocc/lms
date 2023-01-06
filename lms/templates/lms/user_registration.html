@@ -1,0 +1,54 @@
+{% extends "lms/base.html" %}
+
+{% load widget_tweaks %}
+{% load static %}
+
+{% block title %}Sign up | LibraryName{% endblock title %}
+
+{% block body %}
+    {% include 'lms/main/navbar.html' with active="signup" %}
+    <main class="container pt-4">
+        <h1>Register to use the library</h1>
+        <p>Once you have registered, head to your local library to be given a library card and start using our
+            services.</p>
+        <div class="d-flex justify-content-center w-100">
+            <form class="w-100" style="max-width: 550px;" method="post">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label" for="id_first_name">First name:</label>
+                    {{ form.first_name|add_class:"form-control" }}
+                    {{ form.first_name.errors }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="id_last_name">Last name:</label>
+                    {{ form.last_name|add_class:"form-control" }}
+                    {{ form.last_name.errors }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="id_email">Email address:</label>
+                    {{ form.email|add_class:"form-control" }}
+                    {{ form.email.errors }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="id_password1">PIN</label>
+                    {{ form.password1|add_class:"form-control"|attr:"minlength:4"|attr:"maxlength:6" }}
+                    <span class="form-text">Your PIN must be 4 to 6 numbers.</span>
+                    {{ form.password1.errors }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="id_password2">PIN confirmation</label>
+                    {{ form.password2|add_class:"form-control"|attr:"minlength:4"|attr:"maxlength:6" }}
+                    <span class="form-text">Enter the same PIN as before, for verification.</span>
+                    {{ form.password2.errors }}
+                </div>
+
+                <button class="btn btn-primary w-100">Sign up</button>
+            </form>
+        </div>
+    </main>
+{% endblock %}

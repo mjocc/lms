@@ -1,0 +1,25 @@
+{% comment %}
+Params:
+  home_button (bool) - whether to show back button
+{% endcomment %}
+
+{% load static %}
+
+<div class="fixed-top d-flex align-items-center justify-content-between ms-2 me-2 mt-2">
+    {% if home_button %}
+        <a href="{% url 'kiosk_home' %}" class="navigation-button btn btn-outline-secondary" title="Home">
+            {% include 'lms/svgs/home.svg' %}
+        </a>
+    {% else %}
+        <div class="d-flex justify-content-start align-items-center" style="width: 70px;">
+            <img id="logo" src="{% static 'lms/logo.svg' %}" alt="log out"/>
+        </div>
+    {% endif %}
+
+    <span class="fs-4 fw-semibold me-2 pb-4">{{ user.get_full_name }}</span>
+
+    <a href="{% url 'logout' %}?next={% url 'kiosk_home' %}"
+       class="navigation-button btn btn-outline-danger" title="Log out">
+        {% include 'lms/svgs/right-from-bracket.svg' %}
+    </a>
+</div>

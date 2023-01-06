@@ -1,0 +1,79 @@
+{% extends "lms/base.html" %}
+
+{% load static %}
+
+{% block title %}KIOSK | Home{% endblock %}
+
+{% block body %}
+    <main x-data="{
+            showReturnButton: true,
+            accessionCode: '',
+            accessionCodes: {{ accession_code_lookup }},
+            submitAttempted: false,
+            returnButtonEl: null,
+            returnInputEl: null,
+            get accessionCodeValid() { return this.accessionCode in this.accessionCodes },
+            get showAccessionCodeError() { return this.submitAttempted && this.accessionCode !== '' } }"
+          class="vh-100 container">
+        {% include "lms/kiosk/navbar.html" with home_button=False %}
+
+        <div @loan-row-click="accessionCode = $event.detail.accessionCode; showReturnButton = false; await $nextTick(); returnButtonEl?.focus({ focusVisible: true });"
+             style="padding-top: 4.75rem;" class="mb-2 h-50">
+            {% include "lms/components/user_loans.html" %}
+        </div>
+
+        <div class="d-flex gap-3 pt-2 justify-content-center align-items-center">
+            <div class="card border border-primary p-4 large-icon-button hoverable {% if user.loans.count == user.loans_allowed %}disabled{% endif %}">
+                <div>
+                    {% include 'lms/svgs/book-arrow-up.svg' %}
+                    Take out books
+                </div>
+                <a href="{% url 'kiosk_take_out' %}" class="stretched-link">
+                </a>
+            </div>
+            <div @click.once="showReturnButton = false; await $nextTick(); returnInputEl?.focus({ focusVisible: true });"
+                 :class="showReturnButton ? 'hoverable' : ''"
+                 class="card border border-primary p-4 large-icon-button {% if user.loans.count == 0 %}disabled{% endif %}">
+                <div x-show="showReturnButton">
+                    {% include 'lms/svgs/book-arrow-right.svg' %}
+                    Return books
+                </div>
+                <div x-cloak x-show="!showReturnButton" x-transition>
+                    <form class="w-75 px-3" :action="`/kiosk/return/${accessionCodes[accessionCode]}/`"
+                          @submit.once="submitAttempted = true"
+                          @submit.prevent.stop="accessionCodeValid ? $el.submit() : null" novalidate>
+                        <div class="mb-2">
+                            <label for="book-field" class="form-label fs-4 mb-2 fs-4 lh-1">Accession code<br>
+                                <span class="fs-6 text-muted">(enter below, scan QR code, or select in the table above)</span>
+                            </label>
+                            <input type="text" x-model="accessionCode"
+                                   class="form-control form-control-lg" x-init="returnInputEl = $el"
+                                   :class="showAccessionCodeError ? accessionCodeValid ? 'is-valid' : 'is-invalid' : ''"
+                                   id="book-field" placeholder="e.g. 927392">
+                            <div class="invalid-feedback fs-6">
+                                Please make sure that the accession code you entered is for a book that you currently
+                                have on loan.
+                            </div>
+                        </div>
+                        <div @qr-code-scanned="accessionCode = $event.detail.data; submitAttempted = true"
+                             class="d-flex gap-2 w-100">
+                            {% include "lms/components/qr_code_scanner.html" %}
+                            <button class="btn btn-primary btn-lg flex-grow-1" x-init="returnButtonEl = $el"
+                                    :class="accessionCode == '' ? 'disabled' : submitAttempted ? !accessionCodeValid ? 'disabled' : '' : ''">
+                                Return
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {% for message in messages %}
+            {% include "lms/components/basic_message.html" %}
+        {% endfor %}
+    </main>
+{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="{% static 'lms/css/kiosk.css' %}"/>
+{% endblock %}

@@ -1,0 +1,44 @@
+.large-icon-button {
+    height: 40vh;
+    width: 50%;
+}
+
+.large-icon-button.hoverable {
+    cursor: pointer !important;
+}
+
+.large-icon-button.hoverable:hover:not(.disabled) {
+    background-color: #eeeeee;
+}
+
+.large-icon-button.disabled {
+    opacity: 0.65;
+    pointer-events: none;
+}
+
+.large-icon-button > div {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    font-size: 200%;
+}
+
+.large-icon-button > div > svg {
+    height: max(20vh, 100px);
+}
+
+.navigation-button svg {
+    height: 35px;
+    margin: 3px;
+}
+.navigation-button:hover {
+    fill: white;
+}
+
+#logo {
+    height: 50px
+}

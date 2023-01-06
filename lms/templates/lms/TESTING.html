@@ -1,0 +1,9 @@
+{% extends "lms/base.html" %}
+
+{% block body %}
+<div class="p-3">
+    {% include "lms/components/loan_table.html" with books=books kiosk=True %}
+</div>
+{% endblock %}
+{#{% block main %}#}
+{#{% endblock %}#}

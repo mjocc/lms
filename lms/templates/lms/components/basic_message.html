@@ -1,0 +1,5 @@
+<div x-init="setTimeout(() => new bootstrap.Alert($el).close(), 3000)"
+     class="alert alert-dismissible fade show {% if message.tags == "success" %}alert-success{% else %}alert-danger{% endif %} mt-3">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>

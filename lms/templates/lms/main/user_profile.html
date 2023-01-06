@@ -1,0 +1,150 @@
+{% extends "lms/base.html" %}
+
+{% load static %}
+
+{% block title %}{{ user.get_short_name }}'s Profile | LibraryName{% endblock %}
+
+{% block body %}
+    {% include 'lms/main/navbar.html' with active="profile" %}
+    <main class="container pt-4" x-data="createState()">
+        <div class="d-flex align-items-end justify-content-between mb-1">
+            <h1>Profile</h1>
+            <h5>Welcome, Firstname</h5>
+        </div>
+
+        <div class="mb-3 border border-primary rounded p-4 h-100 mx-sm-0 mx-3">
+            <div class="d-flex justify-content-between align-items-end">
+                <h3>Current loans</h3>
+                <h5>{{ user.loans.count }} of out {{ user.loans_allowed }} books taken out</h5>
+            </div>
+            {% include "lms/components/loan_table.html" %}
+        </div>
+
+        <div class="border border-primary rounded p-4 h-100 mx-sm-0 mx-3">
+            <h4 class="mb-1">Account settings</h4>
+            <div class="mb-3 row">
+                <span class="col-sm-3 col-form-label">Library card number</span>
+                <div class="col-sm-6 col-xl-7">
+                    <span class="d-inline-block" style="padding: .375rem 0;">{{ user.username }}</span>
+                </div>
+                <span class="col-sm-3 col-xl-2 p-0" tabindex="0" id="library-card-number-popover"
+                      data-bs-toggle="popover" style="cursor: help;"
+                      data-bs-placement="left" data-bs-trigger="hover focus" data-bs-container="body"
+                      data-bs-title="Your library card number"
+                      data-bs-content="This is assigned to you randomly when you register, and cannot be changed.
+                  To get a physical copy of your card, go to your local library and ask.">
+                <button disabled class="btn btn-primary w-100">Change number</button>
+            </span>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3 row">
+                    <label class="col-sm-3 col-form-label" for="id_first_name">First name</label>
+                    <div class="col-sm-6 col-xl-7">
+                        <input id="id_first_name" type="text" :readonly="!editable['firstName']"
+                               x-model="values['firstName']" name="first_name"
+                               :class="editable['firstName'] ? 'form-control' : 'form-control-plaintext'"/>
+                    </div>
+                    <button type="button" x-show="!editable['firstName']" @click="startEditing('firstName')"
+                            class="btn btn-primary col-sm-3 col-xl-2">Update first name
+                    </button>
+                    <div x-cloak x-show="editable['firstName']" class="btn-group col-sm-3 col-xl-2 p-0" role="group"
+                         style="fill: white;">
+                        <button type="submit" title="Submit" @click="submitEdit('firstName')"
+                                class="btn btn-primary d-flex justify-content-center align-items-center">
+                            {% include 'lms/svgs/check.svg' %}
+                        </button>
+                        <button type="button" title="Cancel" @click="cancelEditing('firstName')"
+                                class="btn btn-primary d-flex justify-content-center align-items-center">
+                            {% include 'lms/svgs/x.svg' %}
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3 row">
+                    <label class="col-sm-3 col-form-label" for="id_last_name">Last name</label>
+                    <div class="col-sm-6 col-xl-7">
+                        <input id="id_last_name" type="text" :readonly="!editable['lastName']"
+                               x-model="values['lastName']" name="last_name"
+                               :class="editable['lastName'] ? 'form-control' : 'form-control-plaintext'"/>
+                    </div>
+                    <button type="button" x-show="!editable['lastName']" @click="startEditing('lastName')"
+                            class="btn btn-primary col-sm-3 col-xl-2">
+                        Update last name
+                    </button>
+                    <div x-cloak x-show="editable['lastName']" class="btn-group col-sm-3 col-xl-2 p-0" role="group"
+                         style="fill: white;">
+                        <button type="button" title="Submit" @click="submitEdit('lastName')"
+                                class="btn btn-primary d-flex justify-content-center align-items-center">
+                            {% include 'lms/svgs/check.svg' %}
+                        </button>
+                        <button type="button" title="Cancel" @click="cancelEditing('lastName')"
+                                class="btn btn-primary d-flex justify-content-center align-items-center">
+                            {% include 'lms/svgs/x.svg' %}
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3 row">
+                    <label class="col-sm-3 col-form-label" for="id_email">Email</label>
+                    <div class="col-sm-6 col-xl-7">
+                        <input id="id_email" type="text" :readonly="!editable['email']" name="email"
+                               x-model="values['email']"
+                               :class="editable['email'] ? 'form-control' : 'form-control-plaintext'"/>
+                    </div>
+                    <button type="button" x-show="!editable['email']" @click="startEditing('email')"
+                            class="btn btn-primary col-sm-3 col-xl-2">Update email
+                    </button>
+                    <div x-cloak x-show="editable['email']" class="btn-group col-sm-3 col-xl-2 p-0" role="group"
+                         style="fill: white;">
+                        <button type="submit" title="Submit" @click="submitEdit('email')"
+                                class="btn btn-primary d-flex justify-content-center align-items-center">{% include 'lms/svgs/check.svg' %}</button>
+                        <button type="button" title="Cancel" @click="cancelEditing('email')"
+                                class="btn btn-primary d-flex justify-content-center align-items-center">{% include 'lms/svgs/x.svg' %}</button>
+                    </div>
+                </div>
+            </form>
+
+
+            <div class="mb-3 row">
+                <span class="col-sm-3 col-form-label">PIN</span>
+                <div class="col-sm-6 col-xl-7">
+                <span class="d-inline-block"
+                      style="padding: .375rem 0; font-size: 25px; font-weight: bold; letter-spacing: -1px; line-height: 25px;">•••••</span>
+                </div>
+                <a href="{% url 'password_change' %}" class="btn btn-primary col-sm-3 col-xl-2">Change PIN</a>
+            </div>
+        </div>
+
+    </main>
+{% endblock %}
+
+{% block script %}
+    <!--suppress JSCheckFunctionSignatures -->
+    <script>
+        // firstName, lastName, email
+        const values = {
+            firstName: `{{ user.first_name }}`,
+            lastName: `{{ user.last_name }}`,
+            email: `{{ user.email }}`,
+        }
+        const createState = () => ({
+            editable: {
+                firstName: false,
+                lastName: false,
+                email: false,
+            },
+            initialValues: Object.assign({}, values),
+            values,
+            startEditing(field) {
+                this.editable[field] = true;
+            },
+            submitEdit(field) {
+            },
+            cancelEditing(field) {
+                this.editable[field] = false;
+                this.values[field] = this.initialValues[field];
+            }
+        });
+        const popover = new bootstrap.Popover(document.getElementById("library-card-number-popover"));
+    </script>
+{% endblock %}

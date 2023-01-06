@@ -1,0 +1,69 @@
+{% comment %}
+Params:
+  book (Book) - book to be rendered
+  no_cover_image (bool) - whether to not show cover image
+{% endcomment %}
+
+{# TODO: move this to global css file #}
+<style>
+    .book-cover {
+        {#background-size: contain;#}
+        {#background-repeat: no-repeat;#}
+        {#background-position: center;#}
+        z-index: 100;
+    }
+</style>
+
+<div class="card" style="height: 25rem">
+    <div class="d-flex">
+        {% if not no_cover_image %}
+            {#        TODO: fix this horrible code - card should have fixed height, image should be the same or a bit less and enxt to it #}
+            <div style="width: 16rem" class="position-relative p-2 d-flex justify-content-center align-items-center">
+                {% if book.cover_file %}
+                    <div class="position-absolute w-100 h-100 d-flex justify-content-center align-items-center">
+                        <div class="spinner-grow text-secondary" role="status" style="z-index: 0">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    <img src="{{ book.cover_file.url }}" alt="{{ book.title }} cover"
+                         class="book-cover" height="352">
+                {% else %}
+                    <div class="h-100 w-100 d-flex justify-content-center align-items-center fs-5 text-muted fst-italic"
+                         style="background-color: var(--bs-card-cap-bg)">No cover found
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+        <div class="border-start border-1">
+            <div class="card-header fs-4">{{ book.title }}</div>
+            <ul class="list-group list-group-flush overflow-auto">
+                <li class="list-group-item">
+                    Written by
+                    {% for author in book.authors.all %}
+                        {% if forloop.last and book.authors.count > 1 %}and {% endif %}
+                        {#                    TODO: author link in book card should not go to "view_author.html" - both that and "view_book.html" should be deleted #}
+                        <a href="{% url "view_author" author_id=author.id %}">{{ author.name }}</a>
+                        {% if not forloop.last and book.authors.count > 2 %},{% endif %}
+                    {% endfor %}
+                </li>
+                <li class="list-group-item">ISBN: {{ book.isbn }}</li>
+                <li class="list-group-item">Work ID: {{ book.work_id }}</li>
+            </ul>
+            <div class="card-footer p-0">
+                <span class="px-3 py-2 d-block">Copies ({{ book.num_copies_available }} out of {{ book.copies.count }} available):</span>
+                {#                {% regroup book.copies.all|dictsort:"on_loan" by on_loan as book_copy_groups %}#}
+                {#                {% for copy_group in book_copy_groups %}#}
+                <ul class="list-group list-group-flush">
+                    {#                    TODO: height probably shouldn't change so much depending on number of copies, although could use masonry to render#}
+                    {% for copy in book.copies.all %}
+                        <li class="list-group-item px-4 {{ copy.on_loan|yesno:"list-group-item-danger,list-group-item-success" }}">
+                            {{ copy.accession_code }} {% if copy.on_loan %}(on loan, due
+                            {{ copy.current_loan.due_date|date:"j F" }}){% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+                {#                {% endfor %}#}
+            </div>
+        </div>
+    </div>
+</div>
