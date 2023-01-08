@@ -19,7 +19,8 @@ Params:
                    data-bs-toggle="dropdown" aria-expanded="false"
                    class="navbar-text d-inline-block dropdown-toggle">{% include 'lms/svgs/user.svg' %}</a>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbar-user-dropdown-button">
-                    <li><a class="dropdown-item {% if active == "profile" %}active{% endif %}" href="{% url 'user_profile' %}">Profile</a></li>
+                    <li><a class="dropdown-item {% if active == "profile" %}active{% endif %}"
+                           href="{% url 'user_profile' %}">Profile</a></li>
                     <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
                 </ul>
             </div>
@@ -36,7 +37,7 @@ Params:
                     </a>
                     <div style="width:250px;" class="dropdown-menu dropdown-menu-end p-4"
                          aria-labelledby="navbar-login-dropdown-button">
-                        <form action="{% url 'login' %}" method="post">
+                        <form class="d-flex flex-column align-items-center" action="{% url 'login' %}?showbutton=home" method="post">
                             {% csrf_token %}
                             <div class="mb-3">
                                 <label for="login-form-number" class="form-label">Library card number</label>
@@ -50,7 +51,8 @@ Params:
                                        class="form-control"
                                        id="login-form-password">
                             </div>
-                            <button type="submit" class="btn btn-primary w-100">Sign in</button>
+                            <button type="submit" class="btn btn-primary w-100 mb-2">Sign in</button>
+                            <a href="{% url 'password_reset' %}">Forgot password?</a>
                         </form>
                     </div>
                 </li>

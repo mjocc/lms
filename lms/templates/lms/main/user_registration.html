@@ -11,24 +11,24 @@
         <h1>Register to use the library</h1>
         <p>Once you have registered, head to your local library to be given a library card and start using our
             services.</p>
-        <div class="d-flex justify-content-center w-100">
+        <div class="d-flex flex-column align-items-center w-100">
             <form class="w-100" style="max-width: 550px;" method="post">
                 {% csrf_token %}
 
                 <div class="mb-3">
-                    <label class="form-label" for="id_first_name">First name:</label>
+                    <label class="form-label" for="id_first_name">First name</label>
                     {{ form.first_name|add_class:"form-control" }}
                     {{ form.first_name.errors }}
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label" for="id_last_name">Last name:</label>
+                    <label class="form-label" for="id_last_name">Last name</label>
                     {{ form.last_name|add_class:"form-control" }}
                     {{ form.last_name.errors }}
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label" for="id_email">Email address:</label>
+                    <label class="form-label" for="id_email">Email address</label>
                     {{ form.email|add_class:"form-control" }}
                     {{ form.email.errors }}
                 </div>
@@ -47,8 +47,9 @@
                     {{ form.password2.errors }}
                 </div>
 
-                <button class="btn btn-primary w-100">Sign up</button>
+                <button class="btn btn-primary w-100 mb-2">Sign up</button>
             </form>
+            <a href="{% url 'login' %}?showbutton=home">Already have an account?</a>
         </div>
     </main>
 {% endblock %}

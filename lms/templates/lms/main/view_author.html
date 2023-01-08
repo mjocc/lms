@@ -1,7 +1,7 @@
 {% extends "lms/base.html" %}
 
 {% block title %}{{ author.name }}{% endblock %}
-
+{# TODO: make this look proper #}
 {% block main %}
     <h3>{{ author.name }}</h3>
     {% for book in author.books.all %}

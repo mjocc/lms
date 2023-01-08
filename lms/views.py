@@ -18,26 +18,11 @@ from django.views.generic import (
     FormView,
     UpdateView,
 )
-from rest_framework import viewsets
-from rest_framework_simplejwt.views import TokenObtainSlidingView
 
 from lms.errors import MaxLoansError, ObjectExistsError, APINotFoundError
 from lms.forms import LibraryUserCreationForm, LibraryUserProfileForm
 from lms.models import BookCopy, Book, Author, LibraryUser, Loan
 from lms.permissions import group_required
-from lms.serializers import (
-    LibraryUserSerializer,
-    AuthorSerializer,
-    BookSerializer,
-    LoanSerializer,
-    LibraryTokenObtainSlidingSerializer,
-)
-
-
-class TESTING(ListView):
-    model = BookCopy
-    template_name = "lms/TESTING.html"
-    context_object_name = "books"
 
 
 ############
@@ -116,6 +101,29 @@ class UserProfileView(LoginRequiredMixin, UpdateView):
 
     def get_object(self, **kwargs):
         return self.request.user
+
+
+class BookDetailView(DetailView):
+    template_name = "lms/main/view_book.html"
+    model = Book
+    slug_field = "edition_id"
+    slug_url_kwarg = "edition_id"
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        data = super().get_context_data(object_list=object_list, **kwargs)
+        authors = [author.id for author in self.object.authors.all()]
+        data["other_author_books"] = Book.objects.filter(
+            authors__in=authors
+        ).exclude(work_id=self.object.work_id).order_by("cover_file").reverse()
+        return data
+
+
+class AuthorDetailView(DetailView):
+    template_name = "lms/main/view_author.html"
+    model = Author
+    slug_field = "id"
+    slug_url_kwarg = "author_id"
+
 
 ############
 # Backend (admin)
@@ -205,26 +213,12 @@ def import_book(request):
         return render(request, "lms/admin/import_book.html")
 
 
-class BookDetailView(DetailView):
-    template_name = "lms/view_book.html"
-    model = Book
-    slug_field = "edition_id"
-    slug_url_kwarg = "edition_id"
-
-
-class AuthorDetailView(DetailView):
-    template_name = "lms/view_author.html"
-    model = Author
-    slug_field = "id"
-    slug_url_kwarg = "author_id"
-
-
 ############
 # Auth
 ############
 class UserRegistrationView(FormView):
     form_class = LibraryUserCreationForm
-    template_name = "lms/user_registration.html"
+    template_name = "lms/main/user_registration.html"
     success_url = reverse_lazy("user_profile")
 
     def form_valid(self, form):
@@ -250,50 +244,3 @@ class UserRegistrationView(FormView):
 
         # redirect the user to the success url (the profile page)
         return http.HttpResponseRedirect(self.get_success_url())
-
-
-############
-# API
-############
-class LibraryUserViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows library users to be viewed or edited.
-    """
-
-    queryset = LibraryUser.objects.all()
-    serializer_class = LibraryUserSerializer
-
-    def create(self, validated_data, **kwargs):
-        library_user = LibraryUser.objects.create_user(**validated_data)
-        return library_user
-
-
-class AuthorViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows authors to be viewed or edited.
-    """
-
-    queryset = Author.objects.all()
-    serializer_class = AuthorSerializer
-
-
-class BookViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows books to be viewed or edited.
-    """
-
-    queryset = Book.objects.all()
-    serializer_class = BookSerializer
-
-
-class LoanViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows loans to be viewed or edited.
-    """
-
-    queryset = Loan.objects.all()
-    serializer_class = LoanSerializer
-
-
-class LibraryTokenObtainSlidingView(TokenObtainSlidingView):
-    serializer_class = LibraryTokenObtainSlidingSerializer

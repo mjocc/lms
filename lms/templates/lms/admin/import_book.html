@@ -3,7 +3,8 @@
 {% block title %}Import book | LMS{% endblock %}
 
 {% load static %}
-
+{#TODO: add this may take a while, please do not refresh the page' notice after a few second of loading on import#}
+{#    books page #}
 {% block body %}
     <main class="container pt-5" x-data="createState()">
         <img class="mb-2" src="{% static 'lms/logo.svg' %}" alt="LMS logo" width="72" height="57">
@@ -38,7 +39,7 @@
                         </template>
                     </tr>
                     </thead>
-                    <tbody>
+                    <tbody x-init="focusLastField();" x-ref="fields">
                     <template x-for="field in fields">
                         <tr>
                             <td>
@@ -102,43 +103,47 @@
                     </button>
                 </div>
 
-                <div x-cloak x-show=" successes?.book_data?.length> 0" class="card mt-4 p-4">
+                <div x-cloak x-show="successes?.book_data?.length > 0" class="card mt-4 p-4">
                     <div class="d-flex justify-content-between">
                         <h3 class="margin-top: -5px">Books created:</h3>
                         <button type="button" class="btn-close" @click="successes = null"
                                 aria-label="Close"></button>
                     </div>
-                    <table class="table" style="table-layout: fixed">
-                        <thead>
-                        <tr>
-                            <th scope="col" style="width: 145px">ISBN</th>
-                            <th scope="col">Title</th>
-                            <th scope="col">Authors</th>
-                            <template x-if="successes?.includes_accessions">
-                                <th scope="col">Accession code</th>
-                            </template>
-                            <th scope="col" style="width: 130px">Action</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <template x-for="book in successes?.book_data">
-                            <tr class="align-middle">
-                                <td><span x-text="book.isbn" :title="book.isbn"></span></td>
-                                <td><span class="d-inline-block text-truncate mw-100" x-text="book.title"
-                                          :title="book.title"></span></td>
-                                <td><span class="d-inline-block text-truncate mw-100" x-text="book.authors"
-                                          :title="book.authors"></span></td>
-                                <template x-if="successes.includes_accessions">
-                                    <td><span class="d-inline-block text-truncate mw-100" x-text="book?.accession"
-                                              :title="book?.accession"></span></td>
+                    <div class="overflow-auto" style="max-height: 300px;">
+                        <table class="table" style="table-layout: fixed">
+                            <thead>
+                            <tr>
+                                <th scope="col" style="width: 145px">ISBN</th>
+                                <th scope="col">Title</th>
+                                <th scope="col">Authors</th>
+                                <template x-if="successes?.includes_accessions">
+                                    <th scope="col">Accession code</th>
                                 </template>
-                                <td>
-                                    <a :href="book.admin_url" class="btn btn-sm btn-primary">View book data</a>
-                                </td>
+                                <th scope="col" style="width: 130px">Action</th>
                             </tr>
-                        </template>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                            <template x-for="book in successes?.book_data">
+                                <tr class="align-middle">
+                                    {# TODO: use proper popovers instead of titles here? (could do whole row popover with book data/cover) #}
+                                    <td><span x-text="book.isbn" :title="book.isbn"></span></td>
+                                    <td><span class="d-inline-block text-truncate mw-100" x-text="book.title"
+                                              :title="book.title"></span></td>
+                                    <td><span class="d-inline-block text-truncate mw-100" x-text="book.authors"
+                                              :title="book.authors"></span></td>
+                                    <template x-if="successes?.includes_accessions">
+                                        <td><span class="d-inline-block text-truncate mw-100" x-text="book?.accession"
+                                                  :title="book?.accession"></span></td>
+                                    </template>
+                                    <td>
+                                        <a target="_blank" :href="book.admin_url" class="btn btn-sm btn-primary">View
+                                            book data</a>
+                                    </td>
+                                </tr>
+                            </template>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </form>
         </div>
@@ -161,6 +166,12 @@
             fields: [{isbn: "", accession: "", error: null}],
             addField() {
                 this.fields.push({isbn: "", accession: "", error: null});
+                this.focusLastField();
+
+            },
+            async focusLastField(container) {
+                await this.$nextTick();
+                this.$refs.fields.lastElementChild.firstElementChild.firstElementChild.focus({focusVisible: true});
             },
             removeField() {
                 this.fields.pop();

@@ -1,4 +1,5 @@
 {% extends "lms/base.html" %}
+
 {% load widget_tweaks %}
 
 {% load static %}
@@ -40,35 +41,59 @@
             border-top-left-radius: 0;
             border-top-right-radius: 0;
         }
+
+        .navigation-button svg {
+            height: 25px;
+            margin: 3px;
+        }
     </style>
 {% endblock %}
 
 {% block body_class %}text-center{% endblock %}
 
 {% block body %}
+    {% if request.GET.showbutton == "home" %}
+        <div class="fixed-top d-flex justify-content-start">
+            <a href="{% url 'main_home' %}"
+               class="m-1 navigation-button btn btn-outline-primary hover-white"
+               title="Home">
+                {% include 'lms/svgs/home.svg' %}
+            </a>
+        </div>
+    {% endif %}
     <main class="form-signin w-100 m-auto">
-        <form class="needs-validation" method="post" novalidate>
-            {% csrf_token %}
-
-            <img class="mb-4" src="{% static 'lms/logo.svg' %}" alt="LMS logo" width="72" height="57">
-            <h1 class="h3 mb-3 fw-normal">Please sign in</h1>
-
-            <div class="form-floating">
-                {{ form.username|attr:"placeholder:Library card number"|add_class:"form-control" }}
-                <label for="id_username">Library card number</label>
+        {% if user.is_authenticated %}
+            <div class="fs-5 d-flex flex-column align-items-center">
+                <img class="mb-4" src="{% static 'lms/logo.svg' %}" alt="LMS logo" width="72" height="57">
+                <p>You are already logged in as {{ user.get_full_name }} ({{ user.username }}).</p>
+                <p>Not you? <a href="{% url 'logout' %}">Logout</a> or <a
+                        href="{% url 'logout' %}?next={% url 'login' %}">login as someone else</a>.</p>
             </div>
-            <div class="form-floating mb-1">
-                {{ form.password|attr:"placeholder:PIN"|attr:"minlength:4"|attr:"maxlength:6"|add_class:"form-control" }}
-                <label for="id_password">PIN</label>
-            </div>
-{# TODO: add password reset link to both this and navbar dropdown form then set up password reset and password change pages using django auth views#}
-            {% if form.non_field_errors %}
-                {% for error in form.non_field_errors %}
-                    <div class="alert alert-danger">{{ error }}</div>
-                {% endfor %}
-            {% endif %}
+        {% else %}
+            <form class="needs-validation" method="post" novalidate>
+                {% csrf_token %}
 
-            <button class="mt-1 w-100 btn btn-lg btn-primary" type="submit">Sign in</button>
-        </form>
+                <img class="mb-4" src="{% static 'lms/logo.svg' %}" alt="LMS logo" width="72" height="57">
+                <h1 class="h3 mb-3 fw-normal">Please sign in</h1>
+
+                <div class="form-floating">
+                    {{ form.username|attr:"placeholder:Library card number"|add_class:"form-control" }}
+                    <label for="id_username">Library card number</label>
+                </div>
+                <div class="form-floating mb-1">
+                    {{ form.password|attr:"placeholder:PIN"|attr:"minlength:4"|attr:"maxlength:6"|add_class:"form-control" }}
+                    <label for="id_password">PIN</label>
+                </div>
+                {# TODO: stlyle password reset and password change pages #}
+                {% if form.non_field_errors %}
+                    {% for error in form.non_field_errors %}
+                        <div class="alert alert-danger">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <button class="mt-1 mb-2 w-100 btn btn-lg btn-primary" type="submit">Sign in</button>
+                <a href="{% url 'password_reset' %}">Forgot password?</a>
+            </form>
+        {% endif %}
     </main>
 {% endblock %}

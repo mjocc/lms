@@ -13,6 +13,8 @@ from django.contrib.auth.models import AbstractUser
 from django.core.files import File
 from django.core.validators import RegexValidator
 from django.db import models
+from django.db.models import QuerySet
+from django.urls import reverse
 from isbn_field import ISBNField
 
 from lms.errors import (
@@ -57,6 +59,9 @@ class Author(models.Model):
     id = models.CharField(primary_key=True, **ol_id_field)
     name = models.CharField(max_length=50)
 
+    def get_absolute_url(self):
+        return reverse("view_author", kwargs={"author_id": self.id})
+
     def __str__(self):
         return f"{self.name} ({self.id})"
 
@@ -69,12 +74,16 @@ class Book(models.Model):
     work_id = models.CharField(**ol_id_field)
     title = models.CharField(max_length=150)
     authors = models.ManyToManyField(Author, related_name="books")
+    description = models.TextField(blank=True, default="")
     cover_url = models.URLField(blank=True, default="")
     cover_file = models.ImageField(upload_to="book_covers", null=True, blank=True)
     date_published = models.DateField(blank=True, null=True, default=None)
 
     def __str__(self):
         return f"{self.title} ({self.edition_id})"
+
+    def get_absolute_url(self):
+        return reverse("view_book", kwargs={"edition_id": self.edition_id})
 
     @property
     def authors_name_string(self) -> str:
@@ -93,6 +102,12 @@ class Book(models.Model):
     @property
     def num_copies_available(self) -> int:
         return self.copies.filter(current_loan__isnull=True).count()
+
+    @property
+    def other_editions(self) -> QuerySet[Book]:
+        return Book.objects.filter(work_id=self.work_id).exclude(
+            edition_id=self.edition_id
+        )
 
     @classmethod
     def from_isbn(cls, isbn: str) -> Book:
@@ -130,7 +145,7 @@ class Book(models.Model):
         # extract the edition id from the provided `key` field
         edition_id = get_id_from_key(book_data["key"])
 
-        # get work information from works API and extract it into a python dict
+        # get edition information from works API and extract it into a python dict
         r = requests.get(f"https://openlibrary.org/books/{edition_id}.json")
         edition_api_data = r.json()
         if "error" in edition_api_data:
@@ -140,10 +155,17 @@ class Book(models.Model):
         work_id = get_id_from_key(edition_api_data["works"][0]["key"])
         # fixme: this only considers the first work in the list, should it do more?
 
-        # extract information from dict, doing any basic processing necessary
+        # get work information from works API and extract it into a python dict
+        r = requests.get(f"https://openlibrary.org/works/{work_id}.json")
+        works_api_data = r.json()
+        if "error" in works_api_data:
+            raise APINotFoundError(edition_id, "Book")
+
+        # extract information from dicts, doing any basic processing necessary
         title = book_data["title"]
         matches = tuple(datefinder.find_dates(book_data["publish_date"]))
         date_published = matches[0].date() if matches else None
+        description = works_api_data.get("description", "")
 
         # get book cover from api and save as file
         cover = book_data.get("cover", None)
@@ -159,6 +181,7 @@ class Book(models.Model):
             edition_id=edition_id,
             work_id=work_id,
             title=title,
+            description=description,
             cover_url=cover_url,
             date_published=date_published,
         )
@@ -286,7 +309,7 @@ class Loan(models.Model):
         self.renewals += 1
         self.renewal_date = date.today()
 
-
+# TODO: do something with history loans
 class HistoryLoan(models.Model):
     user = models.ForeignKey(
         LibraryUser, on_delete=models.PROTECT, related_name="loan_history"

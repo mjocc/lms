@@ -41,7 +41,6 @@ Params:
                     Written by
                     {% for author in book.authors.all %}
                         {% if forloop.last and book.authors.count > 1 %}and {% endif %}
-                        {#                    TODO: author link in book card should not go to "view_author.html" - both that and "view_book.html" should be deleted #}
                         <a href="{% url "view_author" author_id=author.id %}">{{ author.name }}</a>
                         {% if not forloop.last and book.authors.count > 2 %},{% endif %}
                     {% endfor %}
