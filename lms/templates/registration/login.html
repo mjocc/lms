@@ -61,10 +61,22 @@
             </a>
         </div>
     {% endif %}
+    {% for message in messages %}
+        <div class="fixed-top">
+            <div class="alert alert-success alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    {% endfor %}
     <main class="form-signin w-100 m-auto">
         {% if user.is_authenticated %}
             <div class="fs-5 d-flex flex-column align-items-center">
                 <img class="mb-4" src="{% static 'lms/logo.svg' %}" alt="LMS logo" width="72" height="57">
+                {% if request.GET.next %}
+                    <p class="fw-semibold">You may want to proceed to <a
+                            href="{{ request.GET.next }}">{{ request.GET.next }}</a>.</p>
+                {% endif %}
                 <p>You are already logged in as {{ user.get_full_name }} ({{ user.username }}).</p>
                 <p>Not you? <a href="{% url 'logout' %}">Logout</a> or <a
                         href="{% url 'logout' %}?next={% url 'login' %}">login as someone else</a>.</p>
@@ -84,7 +96,6 @@
                     {{ form.password|attr:"placeholder:PIN"|attr:"minlength:4"|attr:"maxlength:6"|add_class:"form-control" }}
                     <label for="id_password">PIN</label>
                 </div>
-                {# TODO: stlyle password reset and password change pages #}
                 {% if form.non_field_errors %}
                     {% for error in form.non_field_errors %}
                         <div class="alert alert-danger">{{ error }}</div>
@@ -92,7 +103,9 @@
                 {% endif %}
 
                 <button class="mt-1 mb-2 w-100 btn btn-lg btn-primary" type="submit">Sign in</button>
-                <a href="{% url 'password_reset' %}">Forgot password?</a>
+                {% if request.GET.showbutton == "home" %}
+                    <a href="{% url 'password_reset' %}">Forgot password?</a>
+                {% endif %}
             </form>
         {% endif %}
     </main>

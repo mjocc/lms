@@ -1,10 +1,11 @@
 {% comment %}
 Params:
   loans (Loan[]) - loans to be rendered
+  history (bool) - whether the table is rendering HistoryLoans or Loans
 {% endcomment %}
 {% load static %}
 
-<table class="table table-hover">
+<table class="table {% if not history %}table-hover{% endif %}">
     <thead>
     <tr class="border-bottom border-dark">
         <th scope="col">#</th>
@@ -12,24 +13,57 @@ Params:
         <th scope="col">Title</th>
         <th scope="col">Authors</th>
 
-        <th scope="col" style="min-width: 110px">Due date</th>
+        {% if history %}
+            <th scope="col" style="min-width: 110px">Loaned date</th>
+            <th scope="col" style="min-width: 110px">Returned date</th>
+            <th scope="col" style="min-width: 50px">Duration</th>
+        {% else %}
+            <th scope="col" style="min-width: 110px">Due date</th>
+            <th scope="col" style="min-width: 50px">Renewals</th>
+        {% endif %}
     </tr>
     </thead>
     <tbody>
-    {% for loan in loans %}
-        <tr @click="$dispatch('loan-row-click', { accessionCode: {{ loan.book.accession_code }} })"
-            :class="accessionCode == {{ loan.book.accession_code }} ? 'table-active' : ''">
-            <th scope="row">{{ loan.book.accession_code }}</th>
+    {% if not history %}
+        {% for loan in loans|dictsort:"due_date" %}
+            <tr @click="$dispatch('loan-row-click', { accessionCode: {{ loan.book.accession_code }} })"
+                :class="accessionCode == {{ loan.book.accession_code }} ? 'table-active' : ''"
+                style="cursor: pointer">
+                <th scope="row">{{ loan.book.accession_code }}</th>
 
-            <td>{{ loan.book.book.title }}</td>
-            <td>{{ loan.book.book.authors_name_string }}</td>
+                <td>{{ loan.book.book.title }}</td>
+                <td>{{ loan.book.book.authors_name_string }}</td>
 
-            <td>{{ loan.due_date }}</td>
-        </tr>
-    {% empty %}
-        <tr>
-            <th class="text-center fst-italic fw-normal" colspan="4" style="pointer-events: none;">No books taken out</th>
-        </tr>
-    {% endfor %}
+
+                <td>{{ loan.due_date }}</td>
+                <td>{{ loan.renewals }} out of {{ request.user.renewal_limit }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <th class="text-center fst-italic fw-normal" colspan="5" style="pointer-events: none;">No books taken
+                    out
+                </th>
+            </tr>
+        {% endfor %}
+    {% else %}
+        {% for loan in loans|dictsortreversed:"returned_date" %}
+            <tr>
+                <th scope="row">{{ loan.book.accession_code }}</th>
+
+                <td>{{ loan.book.book.title }}</td>
+                <td>{{ loan.book.book.authors_name_string }}</td>
+
+                <td>{{ loan.loan_date }}</td>
+                <td>{{ loan.returned_date }}</td>
+                <td>{{ loan.duration.days }} days</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <th class="text-center fst-italic fw-normal" colspan="6" style="pointer-events: none;">No books taken
+                    out
+                </th>
+            </tr>
+        {% endfor %}
+    {% endif %}
     </tbody>
 </table>

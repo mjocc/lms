@@ -1,0 +1,29 @@
+{% extends 'lms/base.html' %}
+
+{% block title %}Reserve book | LibraryName{% endblock %}
+
+{% block body %}
+    {% include 'lms/main/navbar.html' %}
+    <main class="container pt-3">
+        <h1>Reserve book</h1>
+
+        <div class="d-flex justify-content-center mt-2 mb-3">
+            {% include 'lms/components/book_card.html' %}
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary btn-lg w-100">Confirm reservation</button>
+        </form>
+
+        {% if user.is_staff %}
+            <div class="border border-secondary rounded-3 p-3 mt-5">
+                <h5>Staff options</h5>
+                <div class="d-flex flex-column w-100 gap-1">
+                    <a class="btn btn-secondary" href="{% url "admin:lms_reservation_changelist" %}">View reservations on
+                        admin site</a>
+                </div>
+            </div>
+        {% endif %}
+    </main>
+{% endblock %}

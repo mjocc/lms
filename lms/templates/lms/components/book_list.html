@@ -1,0 +1,168 @@
+{% comment %}
+Parameters:
+    title (str) - title of page
+    books (Book[]) - list of books to display
+    author (Author?) - if the component is being displayed on the author page
+{% endcomment %}
+
+{% load humanize %}
+
+<style>
+    .btn.btn-outline-primary.sort.asc, .btn.btn-outline-primary.sort.desc {
+        color: var(--bs-btn-active-color);
+        background-color: var(--bs-btn-active-bg);
+        border-color: var(--bs-btn-active-border-color);
+
+    }
+
+    .sort.asc:after {
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 5px solid #fff;
+        content: "";
+        position: relative;
+        top: 14px;
+        right: -6px;
+    }
+
+    .sort.desc:after {
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-bottom: 5px solid #fff;
+        content: "";
+        position: relative;
+        top: -13px;
+        right: -6px;
+    }
+</style>
+
+<div id="book-list-container" x-data="createState()"
+     x-init="$watch('showOnlyAvailable', value => updateFilter(value))">
+    <div class="d-flex justify-content-between align-items-end mb-3">
+        <h1 class="mb-0 {% if not author %}fs-2{% endif %}">{{ title }}</h1>
+        {% if author and user.is_staff %}
+            <div>
+                <a class="btn btn-secondary" href="{% url "admin:lms_author_change" author.pk %}">Staff: Edit on
+                    admin site</a>
+            </div>
+        {% endif %}
+        <div>
+            <div class="btn-group" role="group" style="width: 150px;">
+                <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}display=cards"
+                   class="btn btn-outline-primary w-50 {% if not request.GET.display == "list" %}active{% endif %}">
+                    Cards
+                </a>
+                <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}display=list"
+                   class="btn btn-outline-primary w-50 {% if request.GET.display == "list" %}active{% endif %}">
+                    List
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="mb-3 d-flex justify-content-between align-items-center gap-3">
+        <div class="form-check form-switch" style="min-width: 315px;">
+            <input class="form-check-input" type="checkbox" id="available-switch" x-model="showOnlyAvailable">
+            <label class="form-check-label" for="available-switch">Only show books with available copies</label>
+        </div>
+        <div class="btn-group" style="min-width: {% if author %}260px{% else %}320px;{% endif %}">
+            <div class="btn btn-outline-primary" style="pointer-events: none; cursor: default;">Sort by:</div>
+            <div class="btn btn-outline-primary sort" data-sort="title">Title</div>
+            {% if not author %}
+                <div class="btn btn-outline-primary sort" data-sort="author">Author</div>
+            {% endif %}
+            <div class="btn btn-outline-primary sort" data-sort="copies">Num. copies</div>
+        </div>
+        {% if author %}
+            <label class="visually-hidden" for="author-search">Search author's books</label>
+            <input style="max-width: 400px;" type="search" class="fuzzy-search form-control" id="author-search"
+                   placeholder="Search author's books"/>
+        {% endif %}
+    </div>
+    {% if request.GET.display == "list" %}
+        <div class="list list-group">
+            {% for book in books|dictsort:"title" %}
+                <a href="{{ book.get_absolute_url }}"
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div class="d-flex gap-3 align-items-center">
+                        {% if book.cover_file %}
+                            <img height="50" src="{{ book.cover_file.url }}" alt="{{ book.title }} cover"
+                                 style="border-radius: 0.2rem;">
+                        {% else %}
+                            <div class="bg-light rounded border border"
+                                 style="height: 50px; width: 35px;">
+                            </div>
+                        {% endif %}
+                        <span><span class="title">{{ book.title }}</span> (<span class="isbn">{{ book.isbn }}</span>)
+                            by <span class="author"
+                                     data-author="{{ book.authors.first }}">{{ book.authors_name_string }}</span></span>
+                    </div>
+                    {% with num_copies=book.num_copies_available %}
+                        <span class="text-end copies"
+                              data-copies="{{ num_copies }}">{{ num_copies|apnumber|capfirst }} cop{{ num_copies|pluralize:'y,ies' }} available</span>
+                    {% endwith %}
+                </a>
+            {% empty %}
+                <div class="fs-5 fst-italic text-center">No books found matching this search query</div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="list d-flex flex-wrap justify-content-center gap-3">
+            {% for book in books|dictsort:"title" %}
+                <div class="card hoverable" style="width: 275px;">
+                    <div class="card-header h-100 text-center d-flex align-items-center justify-content-center">
+                        <h5 class="mb-0 title">{{ book.title }}</h5>
+                    </div>
+                    <div class="my-3 w-100 d-flex justify-content-center align-items-center">
+                        {% if book.cover_file %}
+                            <img height="350" src="{{ book.cover_file.url }}" alt="{{ book.title }} cover"
+                                 class="rounded">
+                        {% else %}
+                            <div class="bg-light rounded-3 border border-1 d-flex justify-content-center
+                            align-items-center fs-5 text-muted fst-italic" style="height: 350px; width: 225px;">
+                                No cover found
+                            </div>
+                        {% endif %}
+                        <a class="stretched-link" href="{{ book.get_absolute_url }}"></a>
+                    </div>
+                    <ul class="list-group list-group-flush mt-auto">
+                        {% if not author %}
+                            <li class="list-group-item author" data-author="{{ book.authors.first }}">
+                                By {{ book.authors_name_string }}
+                            </li>
+                        {% endif %}
+                        {% with num_copies=book.num_copies_available %}
+                            <li class="list-group-item copies" data-copies="{{ num_copies }}">
+                                {{ num_copies|apnumber|capfirst }} cop{{ num_copies|pluralize:'y,ies' }} available
+                            </li>
+                        {% endwith %}
+                        <li class="list-group-item">ISBN <span class="float-end isbn">{{ book.isbn }}</span></li>
+                        <li class="list-group-item">OL ID <span class="float-end">{{ book.edition_id }}</span></li>
+                    </ul>
+                </div>
+            {% empty %}
+                <div class="fs-5 fst-italic">No books found matching this search query</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/list.js/2.3.1/list.min.js"></script>
+<script>
+    const bookList = new List('book-list-container', {
+        valueNames: ['title', 'isbn', {attr: 'data-copies', name: 'copies'}, {attr: 'data-author', name: 'author'}]
+    });
+    const createState = () => ({
+        showOnlyAvailable: false,
+    });
+    const updateFilter = (showOnlyAvailable) => {
+        if (showOnlyAvailable) {
+            bookList.filter((book) => parseInt(book.values().copies) > 0);
+        } else {
+            bookList.filter();
+        }
+    }
+</script>

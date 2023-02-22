@@ -1,16 +1,20 @@
 from __future__ import annotations
 
+import datetime
 import re
 import uuid
-from datetime import date, timedelta
+from datetime import datetime, date, timedelta
 from tempfile import NamedTemporaryFile
+from typing import Optional
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
 import datefinder
 import requests
+from django.contrib import admin
 from django.contrib.auth.models import AbstractUser
 from django.core.files import File
+from django.core.mail import send_mail
 from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import QuerySet
@@ -22,6 +26,7 @@ from lms.errors import (
     APINotFoundError,
     MaxLoansError,
     MaxRenewalsError,
+    BookUnavailableError,
 )
 
 
@@ -37,7 +42,7 @@ class LibraryUser(AbstractUser):
     loan_length = models.PositiveSmallIntegerField(
         blank=True,
         default=7,
-        help_text="number of days the each loan/renewal the user makes is valid for",
+        help_text="number of days that each loan/renewal the user makes is valid for",
     )
     renewal_limit = models.PositiveSmallIntegerField(
         blank=True, default=3, help_text="number of times the user can renew a book"
@@ -60,7 +65,7 @@ class Author(models.Model):
     name = models.CharField(max_length=50)
 
     def get_absolute_url(self):
-        return reverse("view_author", kwargs={"author_id": self.id})
+        return reverse("view_author", args=(self.id,))
 
     def __str__(self):
         return f"{self.name} ({self.id})"
@@ -74,18 +79,29 @@ class Book(models.Model):
     work_id = models.CharField(**ol_id_field)
     title = models.CharField(max_length=150)
     authors = models.ManyToManyField(Author, related_name="books")
-    description = models.TextField(blank=True, default="")
+    description = models.TextField(
+        blank=True, default="", help_text="description text written in markdown"
+    )
+    # used to show most recently added books on home page
+    created = models.DateField(auto_now_add=True)
     cover_url = models.URLField(blank=True, default="")
     cover_file = models.ImageField(upload_to="book_covers", null=True, blank=True)
     date_published = models.DateField(blank=True, null=True, default=None)
+    featured = models.BooleanField(
+        blank=True,
+        default=False,
+        help_text="whether the book should be featured on the home page - make sure "
+        "it has a cover",
+    )
 
     def __str__(self):
         return f"{self.title} ({self.edition_id})"
 
     def get_absolute_url(self):
-        return reverse("view_book", kwargs={"edition_id": self.edition_id})
+        return reverse("view_book", args=(self.edition_id,))
 
     @property
+    @admin.display(description="Authors' Names")
     def authors_name_string(self) -> str:
         all_authors = [author.name for author in self.authors.all()]
         if len(all_authors) == 1:
@@ -100,8 +116,12 @@ class Book(models.Model):
             return ", ".join(all_authors[:-1])
 
     @property
+    def available_copies(self) -> QuerySet[BookCopy]:
+        return self.copies.filter(current_loan__isnull=True, reservation__isnull=True)
+
+    @property
     def num_copies_available(self) -> int:
-        return self.copies.filter(current_loan__isnull=True).count()
+        return self.available_copies.count()
 
     @property
     def other_editions(self) -> QuerySet[Book]:
@@ -109,10 +129,15 @@ class Book(models.Model):
             edition_id=self.edition_id
         )
 
+    @property
+    def copy_next_available(self) -> Optional[date]:
+        """Returns the soonest due date of the copies that are currently unavailable,
+        or null if they're all available."""
+        if self.num_copies_available < self.copies.count():
+            return min(copy.due_date for copy in self.copies.all() if copy.due_date)
+
     @classmethod
     def from_isbn(cls, isbn: str) -> Book:
-        # TODO: redo using google books api?
-        #   https://www.googleapis.com/books/v1/volumes?q=isbn:9780525559474
         """
         Get or create a Book object from an isbn, pulling any required data on the
         book or its authors from the OpenLibrary API. Could raise APINotFoundError.
@@ -153,7 +178,6 @@ class Book(models.Model):
 
         # extracts the work_id from the provided nested dict
         work_id = get_id_from_key(edition_api_data["works"][0]["key"])
-        # fixme: this only considers the first work in the list, should it do more?
 
         # get work information from works API and extract it into a python dict
         r = requests.get(f"https://openlibrary.org/works/{work_id}.json")
@@ -208,11 +232,18 @@ class BookCopy(models.Model):
     book = models.ForeignKey(Book, on_delete=models.PROTECT, related_name="copies")
 
     @property
-    def on_loan(self):
-        return hasattr(self, "current_loan")
+    def unavailable(self):
+        return hasattr(self, "current_loan") or hasattr(self, "reservation")
+
+    @property
+    def due_date(self) -> Optional[date]:
+        if hasattr(self, "current_loan"):
+            return self.current_loan.due_date
+        elif hasattr(self, "reservation"):
+            return self.reservation.expiry_date
 
     def __str__(self):
-        return f"{str(self.book)} — {self.accession_code}"
+        return f"{self.accession_code} ({self.book.title} [{self.book.edition_id}])"
 
     @classmethod
     def from_isbn(cls, isbn: str, accession_code: int) -> BookCopy:
@@ -252,7 +283,7 @@ class Loan(models.Model):
         blank=True,
         default=date.today,
         help_text="date the loan was last renewed (or first began if it has never "
-        "been renewed ",
+        "been renewed)",
     )
     renewals = models.PositiveSmallIntegerField(
         blank=True, default=0, help_text="number of renewals so far"
@@ -272,44 +303,145 @@ class Loan(models.Model):
             f"(until {self.due_date})"
         )
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, ignore_unavailable=None, **kwargs):
         """
         Loan a book out to a user, ensuring that they are within their loan
-        allowance. Could raise MaxLoansError.
+        allowance. Could raise MaxLoansError or BookUnavailableError (if
+        ignore_unavailable not passed).
         """
-        # checks that the user won't be going over their loan limit
-        if self.user.loans.count() >= self.user.loans_allowed:
+        # checks that the user won't be going over their loan limit when first creating
+        if self._state.adding and self.user.loans.count() >= self.user.loans_allowed:
             raise MaxLoansError(self.user)
 
+        # ensures that the book is available when first creating
+        if (
+            self._state.adding
+            and hasattr(self.book, "reservation")
+            and not ignore_unavailable
+        ):
+            raise BookUnavailableError(self.book)
+
         # creates the loan
-        super().save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         """
         Return a book that a user has loaned out, adding a record of the loan to
-        the history.
+        the history and assigning the book to any outstanding reservations.
         """
         # adds loan to history
         HistoryLoan.objects.create(
             user=self.user, book=self.book, loan_date=self.loan_date
         )
 
-        # deletes the loan
-        super().delete(*args, **kwargs)
+        # assign book copy to reservation (if exists)
+        reservation = Reservation.objects.filter(
+            copy__isnull=True, book=self.book.book
+        ).first()
+        if reservation:
+            reservation.assign_book_copy(copy=self.book, email_on_success=True)
+            reservation.save()
 
-    def renew(self):
+        # deletes the loan
+        return super().delete(*args, **kwargs)
+
+    def renew(self, force=False):
         """
         Renews the loan, performing all necessary checks and background updates.
-        Could raise MaxRenewalsError.
+        Could raise MaxRenewalsError (unless force=True is passed).
         """
         # checks that the user has not reached their renewal limit
-        if self.renewals >= self.user.renewal_limit:
+        if not force and self.renewals >= self.user.renewal_limit:
             raise MaxRenewalsError(self)
 
         self.renewals += 1
         self.renewal_date = date.today()
 
-# TODO: do something with history loans
+
+class Reservation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        LibraryUser, on_delete=models.PROTECT, related_name="reservations"
+    )
+    book = models.ForeignKey(
+        Book, on_delete=models.PROTECT, related_name="reservations"
+    )
+    copy = models.OneToOneField(
+        BookCopy,
+        on_delete=models.PROTECT,
+        related_name="reservation",
+        blank=True,
+        null=True,
+    )
+    # ready_since should be set when a copy is added
+    ready_since = models.DateField(
+        blank=True,
+        null=True,
+        help_text="date the reservation was ready for collection ",
+    )
+    off_shelves = models.BooleanField(
+        blank=True,
+        default=False,
+        help_text="whether the book has been taken off "
+        "the shelves and put in the reserved "
+        "section",
+    )
+
+    def __str__(self):
+        return f"{self.book.title} ({self.book.edition_id}) -> {self.user.username}"
+
+    @property
+    def needs_copy(self) -> bool:
+        return self.copy is None
+
+    @property
+    def expiry_date(self) -> Optional[date]:
+        if self.ready_since:
+            return self.ready_since + timedelta(days=7)
+
+    @property
+    def days_to_collect(self) -> Optional[int]:
+        if self.ready_since:
+            days_left = 7 - (date.today() - self.ready_since).days
+            return days_left
+
+    @property
+    def expired(self) -> Optional[bool]:
+        if self.expiry_date:
+            return self.expiry_date < date.today()
+
+    def assign_book_copy(self, email_on_success=False, copy=None) -> Optional[bool]:
+        """
+        If one is available, assigns a book copy to the reservation (if it doesn't
+        already have one), sending an email to the user letting them know their
+        reservation is ready if requested. Doesn't call self.save(). Returns bool
+        based on whether a book copy was assigned.
+        """
+        if not self.needs_copy:
+            return None
+
+        if copy:
+            self.copy = copy
+        else:
+            if self.book.num_copies_available == 0:
+                return False
+            self.copy = self.book.available_copies.first()
+        self.ready_since = datetime.now()
+
+        if email_on_success:
+            self.user.email_user(
+                subject="Reservation ready for collection",
+                message=f"The book you reserved, {self.book.title} by "
+                f"{self.book.authors_name_string} is available to be collected from "
+                f"the library. It will be held for you for seven days, before being "
+                f"returned to the shelves. More information can be viewed on your "
+                        f"account page on the library website.",
+                fail_silently=False,
+            )
+
+        return True
+
+
 class HistoryLoan(models.Model):
     user = models.ForeignKey(
         LibraryUser, on_delete=models.PROTECT, related_name="loan_history"
@@ -327,6 +459,10 @@ class HistoryLoan(models.Model):
             f"{self.book.book.title} ({self.book.accession_code}) -> {self.user.username} "
             f"({self.loan_date} to {self.returned_date})"
         )
+
+    @property
+    def duration(self):
+        return self.returned_date - self.loan_date
 
 
 def get_id_from_key(key_path: str, index: int = 2):

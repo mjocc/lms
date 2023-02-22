@@ -24,7 +24,9 @@ SECRET_KEY = "django-insecure-pq@!v1a!b5nporg@31w7&bi4ai)0lmbq8fl8dk66_2p6+1+1c=
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Hosting (second url must include http(s):// and not have a trailing slash - FQDNs)
+ALLOWED_HOSTS = ["localhost"]
+CSRF_TRUSTED_ORIGINS = []
 
 # Application definition
 
@@ -42,6 +44,7 @@ INSTALLED_APPS = [
     "django_object_actions",
     "widget_tweaks",
     "markdownify.apps.MarkdownifyConfig",
+    "csvexport",
 ]
 
 MIDDLEWARE = [

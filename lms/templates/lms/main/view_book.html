@@ -8,38 +8,55 @@
 {% block body %}
     {% include 'lms/main/navbar.html' %}
 
-    <main class="p-5 container">
+    <main class="py-5 px-lg-5 container">
+        {# LEFT SIDEBAR (COVER/INFO/STAFF OPTIONS) #}
         <div class="position-fixed">
-            {% if book.cover_file %}
-                <img height="350" src="{{ book.cover_file.url }}" alt="{{ book.title }} cover"
-                     class="rounded">
-            {% else %}
-                <div class="bg-light rounded-3 border border-2 d-flex justify-content-center align-items-center fs-5 text-muted fst-italic"
-                     style="height: 350px; width: 225px;">
-                    No cover found
-                </div>
-            {% endif %}
-            <ul class="list-group mt-3">
+            <div style="max-width: 235px;" class="overflow-scroll">
+                {% if book.cover_file %}
+                    <img height="350" src="{{ book.cover_file.url }}" alt="{{ book.title }} cover"
+                         class="rounded">
+                {% else %}
+                    <div class="bg-light rounded-3 border d-flex justify-content-center align-items-center fs-5 text-muted fst-italic"
+                         style="height: 350px; width: 225px;">
+                        No cover found
+                    </div>
+                {% endif %}
+            </div>
+            <ul class="list-group my-3">
                 {% if book.date_published %}
                     <li class="list-group-item">Published {{ book.date_published }}</li>
                 {% endif %}
                 <li class="list-group-item">ISBN <span class="float-end">{{ book.isbn }}</span></li>
                 <li class="list-group-item">OL ID <span class="float-end">{{ book.edition_id }}</span></li>
             </ul>
+
+            {% if user.is_staff %}
+                <div class="border border-secondary rounded-3 p-3">
+                    <h5>Staff options</h5>
+                    <div class="d-flex flex-column w-100 gap-1">
+                        <a class="btn btn-secondary" href="{% url "admin:lms_book_change" book.pk %}">Edit on
+                            admin site</a>
+                        <a class="btn btn-secondary" href="{% url "admin:lms_book_change" book.pk %}#copies-group">Add
+                            copy</a>
+                    </div>
+                </div>
+            {% endif %}
         </div>
 
         <div class="d-flex flex-column w-100" style="padding-left: 250px;">
+            {# TITLE AND AUTHORS #}
             <div class="d-flex justify-content-between align-items-end mb-1">
                 <h1>{{ book.title }}</h1>
                 <h4 class="pb-1">by
                     {% for author in book.authors.all %}
                         {% if forloop.last and book.authors.count > 1 %}and {% endif %}
-                        <a href="{% url "view_author" author_id=author.id %}">{{ author.name }}</a>
+                        <a href="{{ author.get_absolute_url }}">{{ author.name }}</a>
                         {% if not forloop.last and book.authors.count > 2 %},{% endif %}
                     {% endfor %}
                 </h4>
             </div>
 
+            {# DESCRIPTION #}
             {% if book.description %}
                 <div class="mb-3" id="book-description-collapse-container">
                     <div class="collapse" id="book-description-collapse" aria-expanded="false">
@@ -52,6 +69,7 @@
                 </div>
             {% endif %}
 
+            {# COPIES #}
             <div class="d-flex justify-content-between align-items-end">
                 <h3>Copies</h3>
                 {% with num_copies=book.num_copies_available %}
@@ -60,26 +78,30 @@
                 {% endwith %}
             </div>
             <ul style="max-height: 185px" class="overflow-auto list-group mb-2 pe-1">
-                {% for copy in book.copies.all|dictsort:"on_loan"|dictsort:"accession_code" %}
+                {% for copy in book.copies.all|dictsort:"accession_code"|dictsort:"unavailable" %}
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <span>{{ copy.accession_code }}</span>
                         <span class="text-end">
-                        {% if copy.on_loan %}
-                            Due on {{ copy.current_loan.due_date }}
+                        {% if copy.unavailable %}
+                            Due on {{ copy.due_date }}
                         {% else %}
                             Available
                         {% endif %}</span>
                     </li>
                 {% endfor %}
             </ul>
-            {# TODO: this should implement to reserve page - may need new db model #}
-            <a class="btn btn-outline-primary mb-4 me-1" href="#">Reserve a copy</a>
 
+            {% if book.copies.count > 0 %}
+                <a class="btn btn-outline-primary mb-4 me-1" href="{% url 'reserve_book' book.edition_id %}">Reserve a
+                    copy</a>
+            {% endif %}
+
+            {# OTHER EDITIONS #}
             {% if book.other_editions %}
                 <h3>Other editions</h3>
                 <div style="max-height: 220px" class="overflow-auto list-group mb-4 pe-1">
                     {% for edition in book.other_editions.all|dictsortreversed:"num_copies_available" %}
-                        <a href="{% url 'view_book' edition.edition_id %}"
+                        <a href="{{ edition.get_absolute_url }}"
                            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                             <div class="d-flex gap-3 align-items-center">
                                 {% if edition.cover_file %}
@@ -100,8 +122,10 @@
                 </div>
             {% endif %}
 
+            {# AUTHORS' OTHER BOOKS #}
             {% if other_author_books %}
-                <h3 class="pb-1">Other books by this author</h3>
+                <h3 class="pb-1">Other books by th{{ book.authors.count|pluralize:'is,ese' }}
+                    author{{ book.authors.count|pluralize }}</h3>
                 <div class="d-flex w-100 gap-3 mw-100 overflow-scroll pb-2">
                     {% for book in other_author_books %}
                         <div class="position-relative">
@@ -116,12 +140,11 @@
                                 </div>
                             {% endif %}
                             <a class="stretched-link" title="{{ book.title }}"
-                               href="{% url 'view_book' book.edition_id %}"></a>
+                               href="{{ book.get_absolute_url }}"></a>
                         </div>
                     {% endfor %}
                 </div>
             {% endif %}
-
         </div>
     </main>
 

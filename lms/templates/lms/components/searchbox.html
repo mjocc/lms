@@ -1,0 +1,47 @@
+{% comment %}
+Parameters:
+  value - starting value for input
+{% endcomment %}
+
+<div class="border rounded mb-3 py-3 px-4" x-data="createSearchboxState()">
+    <form method="get" :action="urls[type]">
+        <label for="search-input" class="fs-5">Search</label>
+        <div class="input-group">
+            <input type="search" class="form-control" id="search-input" value="{{ value }}" name="q" required/>
+            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                    aria-expanded="false" x-text="type">Books
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <button type="button" class="dropdown-item" :class="type === 'Books' ? 'active' : ''"
+                            @click="type = 'Books'">
+                        Books
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="dropdown-item" :class="type === 'Authors' ? 'active' : ''"
+                            @click="type = 'Authors'">
+                        Authors
+                    </button>
+                </li>
+            </ul>
+            <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    let urlSearchType = new URL(window.location.href)?.pathname?.split("/")?.[2]
+    urlSearchType = urlSearchType?.[0]?.toUpperCase() + urlSearchType?.substring(1)
+    if (!["Authors", "Books"].includes(urlSearchType)) {
+        urlSearchType = "Books"
+    }
+
+    const createSearchboxState = () => ({
+        urls: {
+            Books: "{% url 'search' 'books' %}",
+            Authors: "{% url 'search' 'authors' %}"
+        },
+        type: urlSearchType
+    })
+</script>

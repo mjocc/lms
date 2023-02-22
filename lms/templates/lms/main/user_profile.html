@@ -1,139 +1,333 @@
 {% extends "lms/base.html" %}
+{% load humanize %}
 
 {% load static %}
 
 {% block title %}{{ user.get_short_name }}'s Profile | LibraryName{% endblock %}
 
 {% block body %}
+    {# NAVBAR #}
     {% include 'lms/main/navbar.html' with active="profile" %}
-    <main class="container pt-4" x-data="createState()">
+
+    <main class="container py-4" x-data="createState()">
+        {# MESSAGES + CONFIRMATIONS #}
+        {% for message in messages %}
+            {% if "reservation_confirmation" in message.extra_tags %}
+                <div x-cloak x-data="{{ message }}"
+                     class="alert alert-success alert-dismissible fade show p-3 mt-2">
+                    <h4 class="alert-heading">'<span x-text="title"></span>' has been reserved for you</h4>
+                    <div x-show="ready_now">
+                        Your book is ready to be picked up now.
+                        It will be held for 7 days, before being returned to the shelves
+                        so as to be available for other users. Please collect it in this time period.
+                    </div>
+                    <div x-show="!ready_now">
+                        There aren't any copies of this book available right now. The earliest a copy is due is on
+                        <span x-text="earliest_date_ready"></span>. We will email you as soon as it is available and
+                        ready for collection.
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% elif "renewal_confirmation" in message.extra_tags %}
+                <div x-data="{{ message }}"
+                     class="alert alert-success alert-dismissible fade show p-3 mt-2">
+                    <h4 class="alert-heading">Loan renewed successfully</h4>
+                    <span class="fw-semibold">Title: <span x-text="title" class="fw-normal"></span></span><br>
+                    <span class="fw-semibold">New due date: <span x-text="due_date" class="fw-normal"></span></span><br>
+                    <span class="fw-semibold"><span x-text="renewals_used"></span> out of <span
+                            x-text="renewals_allowed"></span> renewals used</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% else %}
+                <div class="alert alert-dismissible fade show {% if message.tags == "success" %}alert-success{% else %}alert-danger{% endif %} mt-2">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endif %}
+        {% endfor %}
+
+        {# TITLE #}
         <div class="d-flex align-items-end justify-content-between mb-1">
             <h1>Profile</h1>
-            <h5>Welcome, Firstname</h5>
+            <h5>Welcome, {{ user.get_short_name }}</h5>
         </div>
 
-        <div class="mb-3 border border-primary rounded p-4 h-100 mx-sm-0 mx-3">
-            <div class="d-flex justify-content-between align-items-end">
-                <h3>Current loans</h3>
-                <h5>{{ user.loans.count }} of out {{ user.loans_allowed }} books taken out</h5>
-            </div>
-            {% include "lms/components/loan_table.html" %}
-        </div>
+        <div class="d-flex gap-3">
+            {# PAGE NAV #}
+            <nav id="page-nav" class="navbar navbar-light bg-light flex-column align-items-stretch p-3 rounded">
+                <nav class="nav nav-pills flex-column">
+                    <a class="nav-link" href="#current-loans">Loans</a>
+                    <a class="nav-link" href="#reservations">Reservations</a>
+                    <a class="nav-link" href="#loan-history">Loan history</a>
+                    <a class="nav-link" href="#account-settings">Account settings</a>
+                </nav>
+            </nav>
 
-        <div class="border border-primary rounded p-4 h-100 mx-sm-0 mx-3">
-            <h4 class="mb-1">Account settings</h4>
-            <div class="mb-3 row">
-                <span class="col-sm-3 col-form-label">Library card number</span>
-                <div class="col-sm-6 col-xl-7">
-                    <span class="d-inline-block" style="padding: .375rem 0;">{{ user.username }}</span>
+            <div data-bs-spy="scroll" data-bs-target="#page-nav" data-bs-offset="0" tabindex="0"
+                 class="overflow-auto flex-grow-1" style="max-height: 650px">
+                {# USER LOANS TABLE #}
+                <div>
+                    <div id="current-loans" @loan-row-click="renewBook($event.detail.accessionCode)"
+                         class="mb-3 border rounded p-4 pb-3 h-100 mx-sm-0 mx-3">
+                        <div class="d-flex justify-content-between align-items-end">
+                            <h3>Current loans</h3>
+                            <h5>{{ user.loans.count }} of out {{ user.loans_allowed }} books taken out</h5>
+                        </div>
+                        {% include "lms/components/loan_table.html" with loans=user.loans.all %}
+                        {% if user.loans.count > 0 %}
+                            <span style="margin-top: -0.5rem;" class="fst-italic text-center w-100 d-block">Click on a loan above to renew it</span>
+                        {% endif %}
+                    </div>
                 </div>
-                <span class="col-sm-3 col-xl-2 p-0" tabindex="0" id="library-card-number-popover"
-                      data-bs-toggle="popover" style="cursor: help;"
-                      data-bs-placement="left" data-bs-trigger="hover focus" data-bs-container="body"
-                      data-bs-title="Your library card number"
-                      data-bs-content="This is assigned to you randomly when you register, and cannot be changed.
+
+                {# USER RESERVATIONS #}
+                <div>
+                    <div id="reservations" class="mb-3 border rounded p-4 pb-3 mx-sm-0 mx-3">
+                        <h3>Reservations</h3>
+                        {% if not available_reservations and not not_available_reservations %}
+                            <div class="fst-italic text-center">No reservations currently made</div>
+                        {% endif %}
+                        {% if available_reservations %}
+                            <h5>Ready to collect</h5>
+                            <ul class="list-group mb-3">
+                                {% for reservation in available_reservations %}
+                                    {% with book=reservation.book %}
+                                        <div class="list-group-item d-flex justify-content-between align-items-center
+                                                    {% if reservation.days_to_collect == 0 %}list-group-item-warning
+                                        {% elif reservation.days_to_collect < 0 %}list-group-item-danger{% endif %}">
+                                            <div class="d-flex gap-3 align-items-center">
+                                                {% if book.cover_file %}
+                                                    <img height="50" src="{{ book.cover_file.url }}"
+                                                         alt="{{ book.title }} cover"
+                                                         style="border-radius: 0.2rem;">
+                                                {% else %}
+                                                    <div class="bg-light rounded border border"
+                                                         style="height: 50px; width: 35px;">
+                                                    </div>
+                                                {% endif %}
+                                                <span>
+                                                    <span class="title">{{ book.title }}</span>
+                                                    (<span class="isbn">{{ book.isbn }}</span>) by
+                                                    <span class="author" data-author="{{ book.authors.first }}">
+                                                        {{ book.authors_name_string }}
+                                                    </span>
+                                                </span>
+                                            </div>
+                                            <span class="text-end">
+                                                {% if reservation.days_to_collect == 0 %}
+                                                    Deadline to collect is today
+                                                {% elif reservation.days_to_collect < 0 %}
+                                                    Reservation has expired
+                                                {% else %}
+                                                    {{ reservation.days_to_collect }}
+                                                    day{{ reservation.days_to_collect|pluralize }} to collect
+                                                {% endif %}</span>
+                                        </div>
+                                    {% endwith %}
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        {% if not_available_reservations %}
+                            <h5>Not yet available</h5>
+                            <ul class="list-group mb-3">
+                                {% for reservation in not_available_reservations %}
+                                    {% with book=reservation.book %}
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div class="d-flex gap-3 align-items-center">
+                                                {% if book.cover_file %}
+                                                    <img height="50" src="{{ book.cover_file.url }}"
+                                                         alt="{{ book.title }} cover"
+                                                         style="border-radius: 0.2rem;">
+                                                {% else %}
+                                                    <div class="bg-light rounded border border"
+                                                         style="height: 50px; width: 35px;">
+                                                    </div>
+                                                {% endif %}
+                                                <span><span class="title">{{ book.title }}</span> (<span
+                                                        class="isbn">{{ book.isbn }}</span>)
+                                                    by <span class="author" data-author="{{ book.authors.first }}">
+                                                        {{ book.authors_name_string }}</span></span>
+                                            </div>
+                                            <span class="text-end">Earliest due {{ book.copy_next_available }}</span>
+                                        </div>
+                                    {% endwith %}
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {# USER LOAN HISTORY #}
+                <div>
+                    <div id="loan-history" class="mb-3 border rounded p-4 h-100 mx-sm-0 mx-3">
+                        <div class="d-flex justify-content-between align-items-end">
+                            <h3>Loan history</h3>
+                            {% with count=user.loan_history.count|add:user.loans.count %}
+                                <h5>{{ count|apnumber|capfirst }}
+                                    book{{ count|pluralize }} taken
+                                    out since {{ user.date_joined|date:"F Y" }}</h5>
+                            {% endwith %}
+                        </div>
+                        <div class="overflow-scroll">
+                            {% include 'lms/components/loan_table.html' with loans=user.loan_history.all history=True %}
+                        </div>
+                    </div>
+                </div>
+
+                {# ACCOUNT SETTINGS #}
+                <div>
+                    <div id="account-settings" class="border rounded p-4 h-100 mx-sm-0 mx-3">
+                        <h4 class="mb-1">Account settings</h4>
+                        <div class="mb-3 row me-1">
+                            <span class="col-sm-3 col-form-label">Library card number</span>
+                            <div class="col-sm-6 col-xl-7">
+                                <span class="d-inline-block" style="padding: .375rem 0;">{{ user.username }}</span>
+                            </div>
+                            <span class="col-sm-3 col-xl-2 p-0" tabindex="0" id="library-card-number-popover"
+                                  data-bs-toggle="popover" style="cursor: help;"
+                                  data-bs-placement="left" data-bs-trigger="hover focus" data-bs-container="body"
+                                  data-bs-title="Your library card number"
+                                  data-bs-content="This is assigned to you randomly when you register, and cannot be changed.
                   To get a physical copy of your card, go to your local library and ask.">
                 <button disabled class="btn btn-primary w-100">Change number</button>
             </span>
-            </div>
+                        </div>
 
-            <form method="post">
-                {% csrf_token %}
-                <div class="mb-3 row">
-                    <label class="col-sm-3 col-form-label" for="id_first_name">First name</label>
-                    <div class="col-sm-6 col-xl-7">
-                        <input id="id_first_name" type="text" :readonly="!editable['firstName']"
-                               x-model="values['firstName']" name="first_name" maxlength="150" required
-                               :class="editable['firstName'] ? 'form-control' : 'form-control-plaintext'"/>
-                    </div>
-                    <button type="button" x-show="!editable['firstName']" @click="startEditing('firstName')"
-                            class="btn btn-primary col-sm-3 col-xl-2">Update first name
-                    </button>
-                    <div x-cloak x-show="editable['firstName']" class="btn-group col-sm-3 col-xl-2 p-0" role="group"
-                         style="fill: white;">
-                        <button type="submit" title="Submit"
-                                class="btn btn-primary d-flex justify-content-center align-items-center">
-                            {% include 'lms/svgs/check.svg' %}
-                        </button>
-                        <button type="button" title="Cancel" @click="cancelEditing('firstName')"
-                                class="btn btn-primary d-flex justify-content-center align-items-center">
-                            {% include 'lms/svgs/x.svg' %}
-                        </button>
-                    </div>
-                </div>
-                {% if form.first_name.errors %}
-                    <div class="alert alert-danger" style="height: 57px;">{{ form.first_name.errors }}</div>
-                {% endif %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3 row me-1">
+                                <label class="col-sm-3 col-form-label" for="id_first_name">First name</label>
+                                <div class="col-sm-6 col-xl-7">
+                                    <input id="id_first_name" type="text" :readonly="!editable['firstName']"
+                                           x-model="values['firstName']" name="first_name" maxlength="150" required
+                                           :class="editable['firstName'] ? 'form-control' : 'form-control-plaintext'"/>
+                                </div>
+                                <button type="button" x-show="!editable['firstName']" @click="startEditing('firstName')"
+                                        class="btn btn-primary col-sm-3 col-xl-2">Update first name
+                                </button>
+                                <div x-cloak x-show="editable['firstName']" class="btn-group col-sm-3 col-xl-2 p-0"
+                                     role="group"
+                                     style="fill: white;">
+                                    <button type="submit" title="Submit"
+                                            class="btn btn-primary d-flex justify-content-center align-items-center">
+                                        {% include 'lms/svgs/check.svg' %}
+                                    </button>
+                                    <button type="button" title="Cancel" @click="cancelEditing('firstName')"
+                                            class="btn btn-primary d-flex justify-content-center align-items-center">
+                                        {% include 'lms/svgs/x.svg' %}
+                                    </button>
+                                </div>
+                            </div>
+                            {% if form.first_name.errors %}
+                                <div class="alert alert-danger" style="height: 57px;">{{ form.first_name.errors }}</div>
+                            {% endif %}
 
-                <div class="mb-3 row">
-                    <label class="col-sm-3 col-form-label" for="id_last_name">Last name</label>
-                    <div class="col-sm-6 col-xl-7">
-                        <input id="id_last_name" type="text" :readonly="!editable['lastName']"
-                               x-model="values['lastName']" name="last_name" maxlength="150" required
-                               :class="editable['lastName'] ? 'form-control' : 'form-control-plaintext'"/>
-                    </div>
-                    <button type="button" x-show="!editable['lastName']" @click="startEditing('lastName')"
-                            class="btn btn-primary col-sm-3 col-xl-2">
-                        Update last name
-                    </button>
-                    <div x-cloak x-show="editable['lastName']" class="btn-group col-sm-3 col-xl-2 p-0" role="group"
-                         style="fill: white;">
-                        <button type="submit" title="Submit"
-                                class="btn btn-primary d-flex justify-content-center align-items-center">
-                            {% include 'lms/svgs/check.svg' %}
-                        </button>
-                        <button type="button" title="Cancel" @click="cancelEditing('lastName')"
-                                class="btn btn-primary d-flex justify-content-center align-items-center">
-                            {% include 'lms/svgs/x.svg' %}
-                        </button>
-                    </div>
-                </div>
-                {% if form.last_name.errors %}
-                    <div class="alert alert-danger" style="height: 57px;">{{ form.last_name.errors }}</div>
-                {% endif %}
+                            <div class="mb-3 row me-1">
+                                <label class="col-sm-3 col-form-label" for="id_last_name">Last name</label>
+                                <div class="col-sm-6 col-xl-7">
+                                    <input id="id_last_name" type="text" :readonly="!editable['lastName']"
+                                           x-model="values['lastName']" name="last_name" maxlength="150" required
+                                           :class="editable['lastName'] ? 'form-control' : 'form-control-plaintext'"/>
+                                </div>
+                                <button type="button" x-show="!editable['lastName']" @click="startEditing('lastName')"
+                                        class="btn btn-primary col-sm-3 col-xl-2">
+                                    Update last name
+                                </button>
+                                <div x-cloak x-show="editable['lastName']" class="btn-group col-sm-3 col-xl-2 p-0"
+                                     role="group"
+                                     style="fill: white;">
+                                    <button type="submit" title="Submit"
+                                            class="btn btn-primary d-flex justify-content-center align-items-center">
+                                        {% include 'lms/svgs/check.svg' %}
+                                    </button>
+                                    <button type="button" title="Cancel" @click="cancelEditing('lastName')"
+                                            class="btn btn-primary d-flex justify-content-center align-items-center">
+                                        {% include 'lms/svgs/x.svg' %}
+                                    </button>
+                                </div>
+                            </div>
+                            {% if form.last_name.errors %}
+                                <div class="alert alert-danger" style="height: 57px;">{{ form.last_name.errors }}</div>
+                            {% endif %}
 
-                <div class="mb-3 row">
-                    <label class="col-sm-3 col-form-label" for="id_email">Email</label>
-                    <div class="col-sm-6 col-xl-7">
-                        <input id="id_email" type="text" :readonly="!editable['email']" name="email"
-                               x-model="values['email']" maxlength="150" required
-                               :class="editable['email'] ? 'form-control' : 'form-control-plaintext'"/>
-                    </div>
-                    <button type="button" x-show="!editable['email']" @click="startEditing('email')"
-                            class="btn btn-primary col-sm-3 col-xl-2">Update email
-                    </button>
-                    <div x-cloak x-show="editable['email']" class="btn-group col-sm-3 col-xl-2 p-0" role="group"
-                         style="fill: white;">
-                        <button type="submit" title="Submit"
-                                class="btn btn-primary d-flex justify-content-center align-items-center">{% include 'lms/svgs/check.svg' %}</button>
-                        <button type="button" title="Cancel" @click="cancelEditing('email')"
-                                class="btn btn-primary d-flex justify-content-center align-items-center">{% include 'lms/svgs/x.svg' %}</button>
-                    </div>
-                </div>
-                {% if form.email.errors %}
-                    <div class="alert alert-danger" style="height: 57px;">{{ form.email.errors }}</div>
-                {% endif %}
-            </form>
+                            <div class="mb-3 row me-1">
+                                <label class="col-sm-3 col-form-label" for="id_email">Email</label>
+                                <div class="col-sm-6 col-xl-7">
+                                    <input id="id_email" type="text" :readonly="!editable['email']" name="email"
+                                           x-model="values['email']" maxlength="150" required
+                                           :class="editable['email'] ? 'form-control' : 'form-control-plaintext'"/>
+                                </div>
+                                <button type="button" x-show="!editable['email']" @click="startEditing('email')"
+                                        class="btn btn-primary col-sm-3 col-xl-2">Update email
+                                </button>
+                                <div x-cloak x-show="editable['email']" class="btn-group col-sm-3 col-xl-2 p-0"
+                                     role="group"
+                                     style="fill: white;">
+                                    <button type="submit" title="Submit"
+                                            class="btn btn-primary d-flex justify-content-center align-items-center">{% include 'lms/svgs/check.svg' %}</button>
+                                    <button type="button" title="Cancel" @click="cancelEditing('email')"
+                                            class="btn btn-primary d-flex justify-content-center align-items-center">{% include 'lms/svgs/x.svg' %}</button>
+                                </div>
+                            </div>
+                            {% if form.email.errors %}
+                                <div class="alert alert-danger" style="height: 57px;">{{ form.email.errors }}</div>
+                            {% endif %}
+                        </form>
 
-            <div class="mb-3 row">
-                <span class="col-sm-3 col-form-label">PIN</span>
-                <div class="col-sm-6 col-xl-7">
+                        <div class="mb-3 row me-1">
+                            <span class="col-sm-3 col-form-label">PIN</span>
+                            <div class="col-sm-6 col-xl-7">
                 <span class="d-inline-block"
                       style="padding: .375rem 0; font-size: 25px; font-weight: bold; letter-spacing: -1px; line-height: 25px;">•••••</span>
-                </div>
-                <a href="{% url 'password_change' %}" class="btn btn-primary col-sm-3 col-xl-2">Change PIN</a>
-            </div>
+                            </div>
+                            <a href="{% url 'password_change' %}" class="btn btn-primary col-sm-3 col-xl-2">Change
+                                PIN</a>
+                        </div>
 
-            {% if form.non_field_errors %}
-                <div class="alert alert-danger" style="height: 57px;">{{ form.non_field_errors }}</div>
-            {% endif %}
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger" style="height: 57px;">{{ form.non_field_errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
         </div>
+
+        {% for loan in user.loans.all %}
+            <div x-ref="{{ loan.book.accession_code }}-loan" class="modal" tabindex="-1"
+                 id="loan-renewal-modal-{{ loan.id }}">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Confirm renewal of loan</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            {% include 'lms/components/book_card.html' with book=loan.book.book %}
+                        </div>
+                        <div class="modal-footer d-flex justify-content-end">
+                            {% if user.is_staff %}
+                                <a class="btn btn-secondary me-auto"
+                                   href="{% url 'admin:lms_bookcopy_change' loan.book.pk %}">Staff:
+                                    Edit loan</a>
+                            {% endif %}
+                            <form method="post" action="{% url 'renew_loan' loan.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-primary">
+                                    Confirm renewal
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
     </main>
 {% endblock %}
 
 {% block script %}
     <!--suppress JSCheckFunctionSignatures -->
     <script>
+        const libraryCardPopover = new bootstrap.Popover(document.getElementById("library-card-number-popover"));
         // firstName, lastName, email
         const values = {
             firstName: `{{ user.first_name }}`,
@@ -154,8 +348,13 @@
             cancelEditing(field) {
                 this.editable[field] = false;
                 this.values[field] = this.initialValues[field];
-            }
+            },
+            async renewBook(accessionCode) {
+                console.log(accessionCode);
+                const modal = bootstrap.Modal.getOrCreateInstance(this.$refs[`${accessionCode}-loan`]);
+                modal.show();
+            },
+            accessionCode: null, // included to stop loan_table erroring
         });
-        const popover = new bootstrap.Popover(document.getElementById("library-card-number-popover"));
     </script>
 {% endblock %}

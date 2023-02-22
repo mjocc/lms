@@ -1,0 +1,65 @@
+{% extends "lms/base.html" %}
+
+{% block title %}Accession codes | LMS{% endblock %}
+
+{% block body %}
+    <style>
+        div.img-container {
+            {#break-before: always; /* 'always,' 'avoid,' 'left,' 'inherit,' or 'right' */#}
+            {#break-after: auto; /* 'always,' 'avoid,' 'left,' 'inherit,' or 'right' */#}
+            break-inside: avoid-page; /* or 'auto' */
+        }
+    </style>
+    <div class="w-100 h-100" x-data="createState()">
+        <div class="border m-4 p-4 d-print-none">
+            <h3>Options</h3>
+            <label for="start-input" class="form-label">Starting number</label>
+            <input class="form-control mb-3" id="start-input" type="number" x-model="start" step="100" min="1"/>
+            <label for="num-codes-input" class="form-label">Number of codes to generate</label>
+            <input class="form-control mb-3" id="num-codes-input" type="number" x-model="numCodes" step="25" min="25"/>
+            <button class="btn btn-primary w-100 mb-2" @click="generateQRCodes">Generate</button>
+            <span>Press <kbd>Ctrl/Cmd + P</kbd> on your keyboard to print the codes.</span>
+        </div>
+        <div x-cloak x-show="generated">
+            <div class="d-flex flex-wrap justify-content-between gap-3 px-4">
+                <template x-for="code in codes">
+                    <div class="img-container border p-2 pb-1 rounded">
+                        <div :id="`qrcode-${code}`"></div>
+                        <span class="w-100 d-inline-block text-center fs-5" x-text="code"></span>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+            integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script type="text/javascript">
+        const createState = () => ({
+            start: 1,
+            numCodes: 50,
+            generated: false,
+            get codes() {
+                let codes = [];
+                for (let i = 0; i < this.numCodes; i++) {
+                    codes.push(this.start + i);
+                }
+                return codes;
+            },
+            generateQRCodes() {
+                this.generated = true;
+                for (let code of this.codes) {
+                    let elem = document.getElementById(`qrcode-${code}`);
+                    new QRCode(elem, {
+                        text: code,
+                        width: 64,
+                        height: 64,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                }
+            }
+        })
+    </script>
+{% endblock %}

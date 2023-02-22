@@ -1,0 +1,77 @@
+{% load humanize %}
+
+{% comment %}
+Parameters:
+    authors (Author[]) - list of authors to display
+{% endcomment %}
+
+<style>
+    .btn.btn-outline-primary.sort.asc, .btn.btn-outline-primary.sort.desc {
+        color: var(--bs-btn-active-color);
+        background-color: var(--bs-btn-active-bg);
+        border-color: var(--bs-btn-active-border-color);
+
+    }
+
+    .sort.asc:after {
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 5px solid #fff;
+        content: "";
+        position: relative;
+        top: 14px;
+        right: -6px;
+    }
+
+    .sort.desc:after {
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-bottom: 5px solid #fff;
+        content: "";
+        position: relative;
+        top: -13px;
+        right: -6px;
+    }
+</style>
+
+<div id="author-list-container">
+    <div class="d-flex justify-content-end mb-3">
+        <div class="btn-group" style="min-width: 250px;">
+            <div class="btn btn-outline-primary" style="pointer-events: none; cursor: default;">Sort by:</div>
+            <div class="btn btn-outline-primary sort" data-sort="name">Name</div>
+            <div class="btn btn-outline-primary sort" data-sort="books">Num. books</div>
+        </div>
+    </div>
+
+    <div class="list list-group">
+        {% for author in authors %}
+            <a class="list-group-item list-group-item-action d-flex justify-content-between fs-5"
+               href="{{ author.get_absolute_url }}">
+                <span class="name">{{ author.name }}</span>
+                {% with num_copies=author.books.count %}
+                    <span class="books" data-books="{{ num_copies }}">
+                    {{ num_copies|apnumber|capfirst }} book{{ num_copies|pluralize }} available
+                </span>
+                {% endwith %}
+            </a>
+        {% empty %}
+            <div class="d-flex flex-column align-items-center">
+                <div class="fs-5 fst-italic text-center">No authors found matching this search query</div>
+                <div class="fs-6 fst-italic">Did you mean to <a
+                        href="{% url 'search' 'books' %}?q={{ request.GET.q }}">search for a book</a> instead?
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/list.js/2.3.1/list.min.js"></script>
+<script>
+    const authorList = new List('author-list-container', {
+        valueNames: ['name', {attr: 'data-books', name: 'books'}]
+    });
+</script>

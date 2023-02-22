@@ -1,10 +1,11 @@
 {% extends "lms/base.html" %}
 
-{% block title %}{{ author.name }}{% endblock %}
-{# TODO: make this look proper #}
-{% block main %}
-    <h3>{{ author.name }}</h3>
-    {% for book in author.books.all %}
-        {% include "lms/components/book_card.html" with no_cover_image=True %}
-    {% endfor %}
+{% block title %}{{ author.name }} | LibraryName{% endblock %}
+
+{% block body %}
+    {% include 'lms/main/navbar.html' %}
+
+    <main class="py-5 px-lg-5 container">
+        {% include 'lms/components/book_list.html' with books=author.books.all title=author.name %}
+    </main>
 {% endblock %}

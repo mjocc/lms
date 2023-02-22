@@ -5,7 +5,7 @@ Params:
 
 {% load static %}
 
-<div class="fixed-top d-flex align-items-center justify-content-between ms-2 me-2 mt-2">
+<div class="fixed-top d-flex align-items-center justify-content-between mx-2 mt-2">
     {% if home_button %}
         <a href="{% url 'kiosk_home' %}" class="navigation-button btn btn-outline-secondary" title="Home">
             {% include 'lms/svgs/home.svg' %}
@@ -22,4 +22,12 @@ Params:
        class="navigation-button btn btn-outline-danger" title="Log out">
         {% include 'lms/svgs/right-from-bracket.svg' %}
     </a>
+
+    {% if user.is_staff %}
+        <div class="fixed-bottom">
+            <a href="{% url 'deactivate_kiosk' %}" class="btn btn-secondary mb-2 ms-2">
+                Deactivate kiosk (will happen automatically at midnight)
+            </a>
+        </div>
+    {% endif %}
 </div>

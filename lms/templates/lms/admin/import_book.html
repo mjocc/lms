@@ -3,8 +3,7 @@
 {% block title %}Import book | LMS{% endblock %}
 
 {% load static %}
-{#TODO: add this may take a while, please do not refresh the page' notice after a few second of loading on import#}
-{#    books page #}
+
 {% block body %}
     <main class="container pt-5" x-data="createState()">
         <img class="mb-2" src="{% static 'lms/logo.svg' %}" alt="LMS logo" width="72" height="57">
@@ -114,12 +113,13 @@
                             <thead>
                             <tr>
                                 <th scope="col" style="width: 145px">ISBN</th>
+                                <th scope="col">OL Edition ID</th>
                                 <th scope="col">Title</th>
                                 <th scope="col">Authors</th>
                                 <template x-if="successes?.includes_accessions">
                                     <th scope="col">Accession code</th>
                                 </template>
-                                <th scope="col" style="width: 130px">Action</th>
+                                <th scope="col" style="width: 150px">View book...</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -127,6 +127,7 @@
                                 <tr class="align-middle">
                                     {# TODO: use proper popovers instead of titles here? (could do whole row popover with book data/cover) #}
                                     <td><span x-text="book.isbn" :title="book.isbn"></span></td>
+                                    <td><span x-text="book.edition_id" :title="book.edition_id"></span></td>
                                     <td><span class="d-inline-block text-truncate mw-100" x-text="book.title"
                                               :title="book.title"></span></td>
                                     <td><span class="d-inline-block text-truncate mw-100" x-text="book.authors"
@@ -136,8 +137,12 @@
                                                   :title="book?.accession"></span></td>
                                     </template>
                                     <td>
-                                        <a target="_blank" :href="book.admin_url" class="btn btn-sm btn-primary">View
-                                            book data</a>
+                                        <div class="btn-group btn-group-sm">
+                                            <a target="_blank" :href="book.admin_url" class="btn btn-sm btn-primary">In
+                                                admin</a>
+                                            <a target="_blank" :href="book.site_url"
+                                               class="btn btn-sm btn-primary">On site</a>
+                                        </div>
                                     </td>
                                 </tr>
                             </template>
@@ -153,17 +158,29 @@
             <button type="button" class="btn-close float-end" aria-label="Close"
                     @click="serverError = false"></button>
         </div>
+        <div id="loading-message-toast" class="toast align-items-center position-fixed fixed-top ms-auto mt-3 me-3"
+             role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    This may take a while, as new book data has to be retrieved from external APIs. Please do not
+                    refresh the page.
+                </div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
     </main>
 {% endblock %}
 
 {% block script %}
     <script>
+        const loadingMessageToast = new bootstrap.Toast(document.getElementById("loading-message-toast"));
+
         const createState = () => ({
             createCopies: true,
             serverError: false,
             loading: false,
             numRows: 1,
-            fields: [{isbn: "", accession: "", error: null}],
+            fields: [{isbn: "{{ request.GET.isbn }}", accession: "", error: null}],
             addField() {
                 this.fields.push({isbn: "", accession: "", error: null});
                 this.focusLastField();
@@ -185,9 +202,12 @@
             successes: null,
             async sendForm(form) {
                 if (form.checkValidity()) {
+                    this.loading = true;
+                    const timeoutID = setTimeout(() => {
+                        loadingMessageToast.show();
+                    }, 1500);
+                    this.serverError = false;
                     try {
-                        this.loading = true;
-                        this.serverError = false;
                         let response = await fetch(form.action, {
                             method: 'POST',
                             headers: {
@@ -201,19 +221,26 @@
                             })
                         });
                         let resData = await response.json();
-                        this.successes = resData.successes;
-                        this.errors = resData.errors.length;
-                        if (this.errors) {
-                            this.fields = resData.errors;
+                        if (resData["server-error"]) {
+                            this.serverError = true;
                         } else {
-                            this.resetFields();
+                            this.successes = resData.successes;
+                            this.errors = resData.errors.length;
+                            if (this.errors) {
+                                this.fields = resData.errors;
+                            } else {
+                                this.resetFields();
+                            }
                         }
                     } catch {
                         this.serverError = true;
                     }
+                    clearTimeout(timeoutID);
                     this.loading = false;
+                    loadingMessageToast.hide();
                 }
             }
         })
+
     </script>
 {% endblock %}

@@ -36,8 +36,8 @@
                 <div x-data="{{ message }}"
                      class="alert alert-success p-4 mt-3">
                     <h4 class="alert-heading">Loan created successfully!</h4>
-                    <span>Title: <span x-text="title"></span></span><br>
-                    <span>Due date: <span x-text="due_date"></span></span><br>
+                    <span class="fw-semibold">Title: <span x-text="title" class="fw-normal"></span></span><br>
+                    <span class="fw-semibold">Due date: <span x-text="due_date" class="fw-normal"></span></span><br>
                     <span>0 out of <span x-text="renewals_allowed"></span> renewals used</span>
                 </div>
             {% else %}

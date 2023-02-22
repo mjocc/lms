@@ -14,6 +14,9 @@ Params:
         </a>
         {% if user.is_authenticated %}
             <div class="position-relative">
+                <a href="{% url 'search' 'books' %}" style="width: 20px; fill: white;"
+                   role="button" title="Search"
+                   class="navbar-text d-inline-block me-3">{% include 'lms/svgs/magnifying-glass.svg' %}</a>
                 <a href="#" style="width: 30px; fill: white; cursor: pointer;" id="navbar-user-dropdown-button"
                    role="button" title="Account options"
                    data-bs-toggle="dropdown" aria-expanded="false"
@@ -21,6 +24,9 @@ Params:
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbar-user-dropdown-button">
                     <li><a class="dropdown-item {% if active == "profile" %}active{% endif %}"
                            href="{% url 'user_profile' %}">Profile</a></li>
+                    {% if user.is_staff %}
+                        <li><a class="dropdown-item" href="/admin/">Staff: Admin site</a></li>
+                    {% endif %}
                     <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
                 </ul>
             </div>
@@ -30,26 +36,25 @@ Params:
                     <a class="nav-link {% if active == "signup" %}active{% endif %}" href="{% url 'register' %}">Sign
                         up</a>
                 </li>
-                <li class="nav-item dropdown">
+                <li class="nav-item dropdown" id="navbar-login-dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="navbar-login-dropdown-button" role="button"
-                       data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="false">
+                       data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
                         Login
                     </a>
                     <div style="width:250px;" class="dropdown-menu dropdown-menu-end p-4"
                          aria-labelledby="navbar-login-dropdown-button">
-                        <form class="d-flex flex-column align-items-center" action="{% url 'login' %}?showbutton=home" method="post">
+                        <form class="d-flex flex-column align-items-center" action="{% url 'login' %}?showbutton=home"
+                              method="post">
                             {% csrf_token %}
                             <div class="mb-3">
                                 <label for="login-form-number" class="form-label">Library card number</label>
                                 <input name="username" required type="text" minlength="10" maxlength="10"
-                                       class="form-control"
-                                       id="login-form-number">
+                                       class="form-control" id="login-form-number">
                             </div>
                             <div class="mb-3">
                                 <label for="login-form-password" class="form-label">PIN</label>
                                 <input name="password" required type="password" minlength="4" maxlength="6"
-                                       class="form-control"
-                                       id="login-form-password">
+                                       class="form-control" id="login-form-password">
                             </div>
                             <button type="submit" class="btn btn-primary w-100 mb-2">Sign in</button>
                             <a href="{% url 'password_reset' %}">Forgot password?</a>
@@ -58,7 +63,12 @@ Params:
                 </li>
             </ul>
         {% endif %}
-
-
     </div>
 </nav>
+
+<script>
+    const navbarDropdown = document.getElementById("navbar-login-dropdown");
+    const libraryCardField = document.getElementById("login-form-number");
+    // focus first form field when dropdown is opened
+    navbarDropdown?.addEventListener('shown.bs.dropdown', event => libraryCardField.focus());
+</script>

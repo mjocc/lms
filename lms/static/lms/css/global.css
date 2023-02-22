@@ -1,0 +1,15 @@
+[x-cloak] {
+    display: none !important;
+}
+
+.hover-white:hover {
+    fill: white;
+}
+
+.card.hoverable:hover {
+    background-color: var(--bs-tertiary-bg);
+}
+
+.card > .list-group-flush > .list-group-item {
+    background-color: transparent !important;
+}

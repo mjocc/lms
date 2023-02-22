@@ -18,7 +18,7 @@
         {% include "lms/kiosk/navbar.html" with home_button=False %}
 
         <div @loan-row-click="accessionCode = $event.detail.accessionCode; showReturnButton = false; await $nextTick(); returnButtonEl?.focus({ focusVisible: true });"
-             style="padding-top: 4.75rem;" class="mb-2 h-50">
+             style="padding-top: 4.75rem;" class="mb-2" style="height: 300px;">
             {% include "lms/components/user_loans.html" %}
         </div>
 

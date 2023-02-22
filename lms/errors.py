@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 
 if typing.TYPE_CHECKING:
-    from lms.models import LibraryUser, Loan
+    from lms.models import LibraryUser, Loan, BookCopy
 
 
 class Error(Exception):
@@ -43,4 +43,11 @@ class MaxRenewalsError(Error):
     def __init__(self, loan: Loan):
         self.message = f"{loan.book} has already been renewed the book out of " \
                        f"{loan.renewals} out of {loan.renewals} times "
+        super().__init__(self.message)
+
+
+class BookUnavailableError(Error):
+    """Raised when a user tried to take out a book that is reserved or on loan."""
+    def __init__(self, book: BookCopy):
+        self.message = f"{book} is not available"
         super().__init__(self.message)

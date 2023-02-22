@@ -10,7 +10,7 @@
     <main class="container pt-4 mt-5">
         <h1>Return a book</h1>
         <div class="d-flex justify-content-center">
-            {% include "lms/components/book_card.html" with book=loan.book.book %}
+            {% include "lms/components/book_card.html" with book=loan.book.book no_links=True %}
         </div>
         <div class="border border-danger rounded p-4 mt-3">
             <form method="post" novalidate>
