@@ -14,7 +14,6 @@ import requests
 from django.contrib import admin
 from django.contrib.auth.models import AbstractUser
 from django.core.files import File
-from django.core.mail import send_mail
 from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import QuerySet
@@ -84,6 +83,7 @@ class Book(models.Model):
     )
     # used to show most recently added books on home page
     created = models.DateField(auto_now_add=True)
+    # url to an image file of the book's cover
     cover_url = models.URLField(blank=True, default="")
     cover_file = models.ImageField(upload_to="book_covers", null=True, blank=True)
     date_published = models.DateField(blank=True, null=True, default=None)
@@ -93,6 +93,9 @@ class Book(models.Model):
         help_text="whether the book should be featured on the home page - make sure "
         "it has a cover",
     )
+
+    class Meta:
+        ordering = ['-created']
 
     def __str__(self):
         return f"{self.title} ({self.edition_id})"
