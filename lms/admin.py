@@ -90,6 +90,8 @@ class ReservationExpiredListFilter(admin.SimpleListFilter):
 
 @admin.register(Book)
 class BookAdmin(DjangoObjectActions, admin.ModelAdmin):
+    pass
+
     actions = ["download_image", "add_featured", "remove_featured", csvexport]
     search_fields = ["isbn__exact", "edition_id__iexact", "work_id__iexact", "title"]
     autocomplete_fields = ["authors"]
@@ -192,7 +194,6 @@ class BookAdmin(DjangoObjectActions, admin.ModelAdmin):
 
 @admin.register(BookCopy)
 class BookCopyAdmin(DjangoObjectActions, admin.ModelAdmin):
-    actions = [csvexport]
     search_fields = [
         "book__title__icontains",
         "book__isbn__exact",
@@ -209,8 +210,9 @@ class BookCopyAdmin(DjangoObjectActions, admin.ModelAdmin):
         "due_date",
     ]
     list_filter = [("current_loan", admin.EmptyFieldListFilter)]
-    inlines = [LoanInline, HistoryLoanInline, ReservationInline]
+    actions = [csvexport]
     change_actions = ["renew_loan", "force_loan_renewal"]
+    inlines = [LoanInline, HistoryLoanInline, ReservationInline]
 
     @admin.display(ordering="book__title")
     def book_title(self, obj):
