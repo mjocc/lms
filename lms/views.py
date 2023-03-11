@@ -105,6 +105,8 @@ class KioskReturn(
 
 @staff_member_required
 def activate_kiosk(request):
+    """Sets a cookie authorising the web browser to access the kiosk pages during the
+    current day, logging the current user out and redirecting them to the kiosk page."""
     res = http.HttpResponseRedirect(f"{reverse('logout')}?next={reverse('kiosk_home')}")
     midnight = datetime.datetime.combine(
         datetime.date.today() + datetime.timedelta(days=1), datetime.time.min

@@ -47,7 +47,7 @@ class ReservationInline(admin.StackedInline):
     extra = 0
 
 
-class ReservationExpiredListFilter(admin.SimpleListFilter):
+class ReservationExpiredListFilter (admin.SimpleListFilter):
     # Human-readable title which will be displayed in the
     # right admin sidebar just above the filter options.
     title = "reservation expired"
@@ -90,8 +90,6 @@ class ReservationExpiredListFilter(admin.SimpleListFilter):
 
 @admin.register(Book)
 class BookAdmin(DjangoObjectActions, admin.ModelAdmin):
-    pass
-
     actions = ["download_image", "add_featured", "remove_featured", csvexport]
     search_fields = ["isbn__exact", "edition_id__iexact", "work_id__iexact", "title"]
     autocomplete_fields = ["authors"]

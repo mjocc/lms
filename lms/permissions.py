@@ -44,6 +44,7 @@ class ViewPermissionsMixin(object):
 
 
 class KioskPermissionMixin(ViewPermissionsMixin):
+    """CBV mixin ensuring that a request contains a valid 'kiosk_activated' cookie"""
     def has_permissions(self):
         return self.request.get_signed_cookie(
             key="kiosk_activated", default=None
