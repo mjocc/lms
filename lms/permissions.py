@@ -33,11 +33,13 @@ volunteer_group, _ = Group.objects.get_or_create(name="Volunteer")
 
 class ViewPermissionsMixin(object):
     """Base class for all custom permission mixins to inherit from"""
-
     def has_permissions(self):
+        # default to ensure that the class never errors if not inherited from properly
         return True
 
     def dispatch(self, request, *args, **kwargs):
+        # ensure that the request has the proper permissions before allowing a
+        # response to be dispatched to the user
         if not self.has_permissions():
             raise PermissionDenied
         return super(ViewPermissionsMixin, self).dispatch(request, *args, **kwargs)
@@ -49,3 +51,4 @@ class KioskPermissionMixin(ViewPermissionsMixin):
         return self.request.get_signed_cookie(
             key="kiosk_activated", default=None
         ) == str(date.today())
+
