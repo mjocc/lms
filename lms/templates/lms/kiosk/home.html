@@ -40,7 +40,7 @@
                 </div>
                 <div x-cloak x-show="!showReturnButton" x-transition>
                     <form class="w-75 px-3" :action="`/kiosk/return/${accessionCodes[accessionCode]}/`"
-                          @submit.once="submitAttempted = true"
+                          @submit.once="submitAttempted = true" {# triggers errors to be shown #}
                           @submit.prevent.stop="accessionCodeValid ? $el.submit() : null" novalidate>
                         <div class="mb-2">
                             <label for="book-field" class="form-label fs-4 mb-2 fs-4 lh-1">Accession code<br>

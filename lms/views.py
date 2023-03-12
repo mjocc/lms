@@ -41,11 +41,13 @@ from lms.permissions import KioskPermissionMixin
 ############
 class KioskHome(KioskPermissionMixin, LoginRequiredMixin, ListView):
     """Render the kiosk home page, providing a list of the user's loans to the
-    template """
+    template."""
+
     template_name = "lms/kiosk/home.html"
     context_object_name = "loans"
 
     def get_queryset(self):
+        # send a QuerySet of the user's loans to the template as 'loans'
         return self.request.user.loans.all()
 
     def get_context_data(self, *, object_list=None, **kwargs):
@@ -56,13 +58,20 @@ class KioskHome(KioskPermissionMixin, LoginRequiredMixin, ListView):
         return data
 
 
+# noinspection PyAttributeOutsideInit
 class KioskTakeOut(KioskPermissionMixin, LoginRequiredMixin, CreateView):
+    """Render the kiosk take out page and accept form submissions, ensuring that the
+    accession code entered is valid and not currently on loan/reserved."""
+
     model = Loan
     template_name = "lms/kiosk/take_out.html"
+    # 'book' is a BookCopy, so this will generate an accession code-accepting form field
     fields = ["book"]
     success_url = reverse_lazy("kiosk_take_out")
 
     def form_valid(self, form):
+        """Validate the form data, ensuring the user hasn't reached their loan limit
+        and the book is available, then show useful success/error message."""
         self.object = form.save(commit=False)
         self.object.user = self.request.user
         try:
@@ -80,6 +89,7 @@ class KioskTakeOut(KioskPermissionMixin, LoginRequiredMixin, CreateView):
         else:
             messages.success(
                 self.request,
+                # JSON data will be rendered by Alpine in the template
                 json.dumps(
                     {
                         "due_date": self.object.due_date.strftime("%A %#d %B %Y"),
@@ -95,6 +105,9 @@ class KioskTakeOut(KioskPermissionMixin, LoginRequiredMixin, CreateView):
 class KioskReturn(
     KioskPermissionMixin, LoginRequiredMixin, SuccessMessageMixin, DeleteView
 ):
+    """Render the kiosk return confirmation page and accept confirmation submissions,
+    ensuring that the accession code entered is valid and currently on loan to the
+    user."""
     model = Loan
     template_name = "lms/kiosk/return.html"
     success_url = reverse_lazy("kiosk_home")
@@ -137,14 +150,18 @@ def deactivate_kiosk(request):
 # Frontend (main)
 ############
 class MainHome(ListView):
+    """Render the site's main page, providing the lists of featured books and newly
+    added books to be shown on the page."""
     template_name = "lms/main/home.html"
     model = Book
 
     def get_queryset(self):
+        # get the books marked as featured in the admin
         return self.model.objects.filter(featured=True)
 
     def get_context_data(self, *, object_list=None, **kwargs):
         data = super().get_context_data(object_list=object_list, **kwargs)
+        # order the books by most recently created, then get the first 10
         data["newly_added"] = Book.objects.all().order_by("-created")[:10]
         return data
 
@@ -179,13 +196,17 @@ class UserProfileView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     success_message = "Account information updated"
 
     def get_object(self, **kwargs):
+        # provide the currently logged in user as the object to be updated
         return self.request.user
 
     def get_context_data(self, *, object_list=None, **kwargs):
         data = super().get_context_data(object_list=object_list, **kwargs)
+        # get all the user's reservations that have copies assigned to them ordered by
+        # how long they've been ready
         data["available_reservations"] = self.request.user.reservations.filter(
             copy__isnull=False
         ).order_by("ready_since")
+        # get all the user's reservations that DO NOT have copies assigned to them
         data["not_available_reservations"] = self.request.user.reservations.filter(
             copy__isnull=True
         )

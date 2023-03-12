@@ -1,9 +1,9 @@
 {% load static %}
 
 <div x-data="{ qrScanner: null, modal: null, get active() { return this.qrScanner?._active } }">
-    <button type="button" @click="qrScanner.start()"
+    <button type="button" @click="qrScanner.start()" data-bs-toggle="modal" data-bs-target="#qrScanModal"
             class="btn btn-primary d-flex justify-content-center align-items-center"
-            style="height: 50px" data-bs-toggle="modal" data-bs-target="#qrScanModal" title="Scan QR code">
+            style="height: 50px"  title="Scan QR code">
             {% include 'lms/svgs/qrcode.svg' %}
     </button>
 
@@ -24,10 +24,11 @@
                             </div>
                         </div>
                         <video x-init="qrScanner = new QrScanner(
-                        $el,
-                        result =>  { $dispatch('qr-code-scanned', result); modal.hide() },
-                        { highlightScanRegion: true },
-                    );"></video>
+                                        $el,
+                                        result =>  { $dispatch('qr-code-scanned', result); modal.hide() },
+                                        { highlightScanRegion: true },
+                                      );">
+                        </video>
                     </div>
                 </div>
             </div>
