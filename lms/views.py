@@ -40,6 +40,8 @@ from lms.permissions import KioskPermissionMixin
 # Kiosk
 ############
 class KioskHome(KioskPermissionMixin, LoginRequiredMixin, ListView):
+    """Render the kiosk home page, providing a list of the user's loans to the
+    template """
     template_name = "lms/kiosk/home.html"
     context_object_name = "loans"
 
