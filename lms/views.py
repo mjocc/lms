@@ -9,7 +9,6 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
-from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -220,6 +219,9 @@ class UserProfileView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
 
 
 class BookDetailView(DetailView):
+    """Render a detail view for book objects, displaying their covers, IDs, titles,
+    authors, copies, other editions, and books by the same author"""
+
     template_name = "lms/main/view_book.html"
     model = Book
     slug_field = "edition_id"
@@ -227,7 +229,11 @@ class BookDetailView(DetailView):
 
     def get_context_data(self, *, object_list=None, **kwargs):
         data = super().get_context_data(object_list=object_list, **kwargs)
+        # get a list of the IDs of every author of the book
         authors = [author.id for author in self.object.authors.all()]
+        # get a list of books that were written by at least one of the authors from
+        # the 'authors' list, prioritising the ones with cover images for aesthetic
+        # purposes
         data["other_author_books"] = (
             Book.objects.filter(authors__in=authors)
             .exclude(work_id=self.object.work_id)
@@ -238,6 +244,9 @@ class BookDetailView(DetailView):
 
 
 class AuthorDetailView(DetailView):
+    """Render a detail view for author objects, displaying a list of their books,
+    alongside accompanying information, in either card or list format."""
+
     template_name = "lms/main/view_author.html"
     model = Author
     slug_field = "id"
@@ -280,16 +289,23 @@ class ReserveView(LoginRequiredMixin, CreateView):
 
 
 class RenewalView(LoginRequiredMixin, UpdateView):
+    """Doesn't render a template, instead providing an endpoint for other pages to
+    send loan renewal requests to, which it will carry out (as long as the
+    permissions are correct)."""
+
     model = Loan
     fields = []
     success_url = reverse_lazy("user_profile")
 
+    def get_queryset(self):
+        # ensures that only user's can only renew their own loans
+        return self.request.user.loans.all()
+
     def form_valid(self, form):
         self.object = form.save(commit=False)
-        if not self.object.user == self.object.user:
-            raise PermissionDenied
         try:
             self.object.renew()
+        # raised if the user has exceeded their renewal limit for this loan
         except MaxRenewalsError:
             messages.error(
                 self.request,
@@ -298,6 +314,7 @@ class RenewalView(LoginRequiredMixin, UpdateView):
             )
         else:
             self.object.save()
+            # Alpine renders the JSON data on the frontend
             messages.success(
                 self.request,
                 json.dumps(

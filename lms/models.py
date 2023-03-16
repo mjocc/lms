@@ -120,14 +120,12 @@ class Book(models.Model):
 
     @property
     def available_copies(self) -> QuerySet[BookCopy]:
+        # get every copy that is both not on loan and not reserved
         return self.copies.filter(current_loan__isnull=True, reservation__isnull=True)
 
     @property
-    def num_copies_available(self) -> int:
-        return self.available_copies.count()
-
-    @property
     def other_editions(self) -> QuerySet[Book]:
+        # get every book object that has the same work ID as this one, excluding itself
         return Book.objects.filter(work_id=self.work_id).exclude(
             edition_id=self.edition_id
         )

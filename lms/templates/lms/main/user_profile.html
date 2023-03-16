@@ -300,7 +300,8 @@
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title">Confirm renewal of loan</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                            </button>
                         </div>
                         <div class="modal-body">
                             {% include 'lms/components/book_card.html' with book=loan.book.book %}
@@ -355,14 +356,11 @@
                 this.editable[field] = false;
                 this.values[field] = this.initialValues[field];
             },
-        });
-    </script>
-
-
-
             async renewBook(accessionCode) {
                 const modal = bootstrap.Modal.getOrCreateInstance(this.$refs[`${accessionCode}-loan`]);
                 modal.show();
             },
             accessionCode: null, // included to stop loan_table erroring
+        });
+    </script>
 {% endblock %}
