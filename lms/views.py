@@ -109,6 +109,7 @@ class KioskReturn(
     """Render the kiosk return confirmation page and accept confirmation submissions,
     ensuring that the accession code entered is valid and currently on loan to the
     user."""
+
     model = Loan
     template_name = "lms/kiosk/return.html"
     success_url = reverse_lazy("kiosk_home")
@@ -153,6 +154,7 @@ def deactivate_kiosk(request):
 class MainHome(ListView):
     """Render the site's main page, providing the lists of featured books and newly
     added books to be shown on the page."""
+
     template_name = "lms/main/home.html"
     model = Book
 
@@ -405,13 +407,10 @@ class AccessionCodeGenerationView(TemplateView):
 ############
 # Auth
 ############
-class UserRegistrationView(SuccessMessageMixin, FormView):
+class UserRegistrationView(FormView):
     form_class = LibraryUserCreationForm
     template_name = "lms/main/user_registration.html"
     success_url = reverse_lazy("user_profile")
-    success_message = "Welcome to the library! Make sure to scroll down to the " \
-                      "'Account information' section to view your library card " \
-                      "number, which you will need to log in in the the future."
 
     def form_valid(self, form):
         # generate library card number (username) while making sure it doesn't
@@ -434,8 +433,14 @@ class UserRegistrationView(SuccessMessageMixin, FormView):
         user.last_name = form.cleaned_data.get("last_name")
         user.save()
 
-        # logs the user in
+        # logs the user in, showing a success message
         login(self.request, user)
+        messages.success(
+            self.request,
+            "Welcome to the library! Make sure to scroll down to the "
+            "'Account information' section to view your library card "
+            "number, which you will need to log in in the the future.",
+        )
 
         # redirect the user to the success url (the profile page)
         return http.HttpResponseRedirect(self.get_success_url())
