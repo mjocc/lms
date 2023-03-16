@@ -328,32 +328,41 @@
 {% block script %}
     <!--suppress JSCheckFunctionSignatures -->
     <script>
+        // initialise the popover with bootstrap
         const libraryCardPopover = new bootstrap.Popover(document.getElementById("library-card-number-popover"));
+
+        // save the initial values the form fields take
         const values = {
             firstName: `{{ user.first_name }}`,
             lastName: `{{ user.last_name }}`,
             email: `{{ user.email }}`,
         }
+        // create the alpine state
         const createState = () => ({
+            // used to determine whether each field should be editable (i.e. no 'readonly' and 'form-control-plaintext')
             editable: {
                 firstName: false,
                 lastName: false,
                 email: false,
             },
+            // initial values saved by value not reference to avoid accidental changes
             initialValues: Object.assign({}, values),
             values,
-            startEditing(field) {
+            startEditing(field) { // run when one of the 'change' buttons is clicked
                 this.editable[field] = true;
             },
-            cancelEditing(field) {
+            cancelEditing(field) { // run when one of the 'cancel' buttons is pressed
                 this.editable[field] = false;
                 this.values[field] = this.initialValues[field];
             },
+        });
+    </script>
+
+
+
             async renewBook(accessionCode) {
                 const modal = bootstrap.Modal.getOrCreateInstance(this.$refs[`${accessionCode}-loan`]);
                 modal.show();
             },
             accessionCode: null, // included to stop loan_table erroring
-        });
-    </script>
 {% endblock %}
