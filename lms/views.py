@@ -254,6 +254,10 @@ class AuthorDetailView(DetailView):
 
 
 class ReserveView(LoginRequiredMixin, CreateView):
+    """Render information about a book with the option to confirm making a
+    reservation before saving the reservation to the database and sending the user to
+    their profile page to view information about it."""
+
     template_name = "lms/main/reserve_book.html"
     model = Reservation
     fields = []
@@ -261,15 +265,23 @@ class ReserveView(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, *, object_list=None, **kwargs):
         data = super().get_context_data(object_list=object_list, **kwargs)
+        # gets the book being reserved so the user can confirm it is correct
         data["book"] = Book.objects.get(edition_id=self.kwargs["edition_id"])
         return data
 
     def form_valid(self, form):
         self.object = form.save(commit=False)
+        # get the user and book from the request/url
         self.object.user = self.request.user
         self.object.book = Book.objects.get(edition_id=self.kwargs["edition_id"])
+
+        # attempt to assign a copy to the reservation object and save it
         ready_now = self.object.assign_book_copy()
         self.object.save()
+
+        # sends JSON data of the title of the book, if it is ready now, and if not
+        # when the earliest due date for one of the copies is, which Alpine will then
+        # render into a message on the frontend
         messages.success(
             self.request,
             json.dumps(

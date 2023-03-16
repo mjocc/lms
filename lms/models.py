@@ -95,7 +95,7 @@ class Book(models.Model):
     )
 
     class Meta:
-        ordering = ['-created']
+        ordering = ["-created"]
 
     def __str__(self):
         return f"{self.title} ({self.edition_id})"
@@ -122,6 +122,10 @@ class Book(models.Model):
     def available_copies(self) -> QuerySet[BookCopy]:
         # get every copy that is both not on loan and not reserved
         return self.copies.filter(current_loan__isnull=True, reservation__isnull=True)
+
+    @property
+    def num_copies_available(self) -> int:
+        return self.available_copies.count()
 
     @property
     def other_editions(self) -> QuerySet[Book]:
@@ -418,17 +422,24 @@ class Reservation(models.Model):
         reservation is ready if requested. Doesn't call self.save(). Returns bool
         based on whether a book copy was assigned.
         """
+        # exits the function if a copy has already been assigned
         if not self.needs_copy:
             return None
 
+        # sets the copy provided in the arguments if there is one
         if copy:
             self.copy = copy
         else:
+            # returns False (book copy not assigned) if there are no copies available
             if self.book.num_copies_available == 0:
                 return False
+            # gets the first available book copy and assigns it to this reservation
             self.copy = self.book.available_copies.first()
-        self.ready_since = datetime.now()
+        self.ready_since = datetime.now()  # sets the ready since property to now
 
+        # sends an email to the user telling them they can pick up their reservation
+        # (usually only done if there wasn't initially a copy available for their
+        # reservation)
         if email_on_success:
             self.user.email_user(
                 subject="Reservation ready for collection",
@@ -436,11 +447,11 @@ class Reservation(models.Model):
                 f"{self.book.authors_name_string} is available to be collected from "
                 f"the library. It will be held for you for seven days, before being "
                 f"returned to the shelves. More information can be viewed on your "
-                        f"account page on the library website.",
+                f"account page on the library website.",
                 fail_silently=False,
             )
 
-        return True
+        return True  # indicates a copy was assigned
 
 
 class HistoryLoan(models.Model):
