@@ -93,7 +93,7 @@
                                 {% for reservation in available_reservations %}
                                     {% with book=reservation.book %}
                                         <div class="list-group-item d-flex justify-content-between align-items-center
-                                                    {% if reservation.days_to_collect == 0 %}list-group-item-warning
+                                        {% if reservation.days_to_collect == 0 %}list-group-item-warning
                                         {% elif reservation.days_to_collect < 0 %}list-group-item-danger{% endif %}">
                                             <div class="d-flex gap-3 align-items-center">
                                                 {% if book.cover_file %}
@@ -114,14 +114,15 @@
                                                 </span>
                                             </div>
                                             <span class="text-end">
-                                                {% if reservation.days_to_collect == 0 %}
-                                                    Deadline to collect is today
-                                                {% elif reservation.days_to_collect < 0 %}
-                                                    Reservation has expired
-                                                {% else %}
-                                                    {{ reservation.days_to_collect }}
-                                                    day{{ reservation.days_to_collect|pluralize }} to collect
-                                                {% endif %}</span>
+                                        {% if reservation.days_to_collect == 0 %}
+                                            Deadline to collect is today
+                                        {% elif reservation.days_to_collect < 0 %}
+                                            Reservation has expired
+                                        {% else %}
+                                            {{ reservation.days_to_collect }}
+                                            day{{ reservation.days_to_collect|pluralize }} to collect
+                                        {% endif %}
+                                    </span>
                                         </div>
                                     {% endwith %}
                                 {% endfor %}
@@ -328,7 +329,6 @@
     <!--suppress JSCheckFunctionSignatures -->
     <script>
         const libraryCardPopover = new bootstrap.Popover(document.getElementById("library-card-number-popover"));
-        // firstName, lastName, email
         const values = {
             firstName: `{{ user.first_name }}`,
             lastName: `{{ user.last_name }}`,
@@ -350,7 +350,6 @@
                 this.values[field] = this.initialValues[field];
             },
             async renewBook(accessionCode) {
-                console.log(accessionCode);
                 const modal = bootstrap.Modal.getOrCreateInstance(this.$refs[`${accessionCode}-loan`]);
                 modal.show();
             },

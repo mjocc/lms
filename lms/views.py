@@ -193,6 +193,9 @@ class SearchView(ListView):
 
 
 class UserProfileView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+    """Render the site's main page, allowing them to view/update their account
+    information and view loan/reservation information"""
+
     template_name = "lms/main/user_profile.html"
     form_class = LibraryUserProfileForm
     success_url = reverse_lazy("user_profile")
