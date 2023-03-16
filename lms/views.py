@@ -5,6 +5,7 @@ import random
 from django import http
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth import login
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
@@ -404,10 +405,13 @@ class AccessionCodeGenerationView(TemplateView):
 ############
 # Auth
 ############
-class UserRegistrationView(FormView):
+class UserRegistrationView(SuccessMessageMixin, FormView):
     form_class = LibraryUserCreationForm
     template_name = "lms/main/user_registration.html"
     success_url = reverse_lazy("user_profile")
+    success_message = "Welcome to the library! Make sure to scroll down to the " \
+                      "'Account information' section to view your library card " \
+                      "number, which you will need to log in in the the future."
 
     def form_valid(self, form):
         # generate library card number (username) while making sure it doesn't
@@ -429,6 +433,9 @@ class UserRegistrationView(FormView):
         user.first_name = form.cleaned_data.get("first_name")
         user.last_name = form.cleaned_data.get("last_name")
         user.save()
+
+        # logs the user in
+        login(self.request, user)
 
         # redirect the user to the success url (the profile page)
         return http.HttpResponseRedirect(self.get_success_url())
