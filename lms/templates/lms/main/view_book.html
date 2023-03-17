@@ -115,7 +115,8 @@
                                 <span>{{ edition.title }} ({{ edition.isbn }})</span>
                             </div>
                             {% with num_copies=edition.num_copies_available %}
-                                <span class="text-end">{{ num_copies|apnumber|capfirst }} cop{{ num_copies|pluralize:'y,ies' }} available</span>
+                                <span class="text-end">{{ num_copies|apnumber|capfirst }}
+                                    cop{{ num_copies|pluralize:'y,ies' }} available</span>
                             {% endwith %}
                         </a>
                     {% endfor %}
