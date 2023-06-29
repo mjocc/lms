@@ -46,6 +46,10 @@ INSTALLED_APPS = [
     "markdownify.apps.MarkdownifyConfig",
     "csvexport",
 ]
+# if reinstalling dependencies, also have datefinder, Pillow, whitenoise, and requests to install
+# pip install django django-isbn-field django-object-actions django-widget-tweaks django-cors-headers
+#   django-markdownify django-admin-csvexport datefinder Pillow whitenoise requests corsheaders
+# + should now have a valid requirements.txt
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
