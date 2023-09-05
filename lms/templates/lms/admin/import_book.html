@@ -125,7 +125,6 @@
                             <tbody>
                             <template x-for="book in successes?.book_data">
                                 <tr class="align-middle">
-                                    {# TODO: use proper popovers instead of titles here? (could do whole row popover with book data/cover) #}
                                     <td><span x-text="book.isbn" :title="book.isbn"></span></td>
                                     <td><span x-text="book.edition_id" :title="book.edition_id"></span></td>
                                     <td><span class="d-inline-block text-truncate mw-100" x-text="book.title"

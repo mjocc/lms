@@ -50,7 +50,7 @@ class LibraryUser(AbstractUser):
     def __str__(self):
         return f"{self.get_full_name()} ({self.username})"
 
-
+# define common defaults for OpenLibrary ID fields to be validated off of
 ol_id_field = dict(
     max_length=20,
     validators=[
@@ -415,7 +415,9 @@ class Reservation(models.Model):
         if self.expiry_date:
             return self.expiry_date < date.today()
 
-    def assign_book_copy(self, email_on_success=False, copy=None) -> Optional[bool]:
+    def assign_book_copy(
+        self, email_on_success: bool = False, copy: Optional[BookCopy] = None
+    ) -> Optional[bool]:
         """
         If one is available, assigns a book copy to the reservation (if it doesn't
         already have one), sending an email to the user letting them know their
@@ -478,8 +480,10 @@ class HistoryLoan(models.Model):
 
 
 def get_id_from_key(key_path: str, index: int = 2):
+    """Extract OL IDs from the 'key' fields returned by the API."""
     return urlparse(key_path).path.split("/")[index]
 
 
 def clean_isbn(isbn):
+    """Remove non-numeric characters (usually dashes) from the input ISBN."""
     return re.sub(r"\D+", r"", isbn)

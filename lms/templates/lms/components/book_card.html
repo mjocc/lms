@@ -9,7 +9,6 @@ Params:
 <div class="card" style="height: 25rem">
     <div class="d-flex">
         {% if not no_cover_image %}
-            {#        TODO: fix this horrible code - card should have fixed height, image should be the same or a bit less and enxt to it #}
             <div style="width: 16rem" class="position-relative p-2 d-flex justify-content-center align-items-center">
                 {% if book.cover_file %}
                     <div class="position-absolute w-100 h-100 d-flex justify-content-center align-items-center">
@@ -48,7 +47,6 @@ Params:
                 {% if not loan %}
                     <span class="px-3 py-2 d-block">Copies ({{ book.num_copies_available }} out of {{ book.copies.count }} available):</span>
                     <ul class="list-group list-group-flush overflow-scroll" style="max-height: 150px;">
-                        {#                    TODO: height probably shouldn't change so much depending on number of copies, although could use masonry to render#}
                         {% for copy in book.copies.all %}
                             <li class="list-group-item px-4 {{ copy.unavailable|yesno:"list-group-item-danger,list-group-item-success" }}">
                                 {{ copy.accession_code }} {% if copy.unavailable %}(on loan, due

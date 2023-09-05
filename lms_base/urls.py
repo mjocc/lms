@@ -16,8 +16,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+# define urlconf to map paths to views for lms app
 urlpatterns = [
+    # lms
     path("", include("lms.urls")),
+
+    # primary admin site items
     path("admin/doc/", include("django.contrib.admindocs.urls")),
     path("admin/", admin.site.urls),
 ]

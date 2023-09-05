@@ -17,11 +17,15 @@ from .models import LibraryUser, Author, Book, BookCopy, Loan, Reservation, Hist
 
 
 class BookCopyInline(admin.TabularInline):
+    """Inline book copy admin inline allowing information on existing book copies to
+    be displayed inline."""
     model = BookCopy
     extra = 0
 
 
 class LoanInline(admin.StackedInline):
+    """Inline loan admin allowing info on a single loan (including due dates/renewals)
+     to be viewed and loans managed."""
     model = Loan
     autocomplete_fields = ["user"]
     fields = ["user", "loan_date", "renewal_date", "renewals", "due_date"]
@@ -34,6 +38,8 @@ class LoanInline(admin.StackedInline):
 
 
 class HistoryLoanInline(admin.StackedInline):
+    """Inline history loan admin allowing the loan history of a book copy to be
+    displayed inline on its model admin."""
     model = HistoryLoan
     fields = ["user", "loan_date", "returned_date"]
     readonly_fields = ["user", "loan_date", "returned_date"]
@@ -41,6 +47,8 @@ class HistoryLoanInline(admin.StackedInline):
 
 
 class ReservationInline(admin.StackedInline):
+    """Inline reservation admin allowing information on a book outsanding reservations
+    and a book copy's existing reservation to be shown."""
     model = Reservation
     autocomplete_fields = ["user"]
     fields = ["user", "ready_since", "off_shelves"]
@@ -48,11 +56,13 @@ class ReservationInline(admin.StackedInline):
 
 
 class ReservationExpiredListFilter (admin.SimpleListFilter):
-    # Human-readable title which will be displayed in the
-    # right admin sidebar just above the filter options.
+    """Custom list filter for reservation admin changelist to check if the reservations
+    are expired or not."""
+    # human-readable title which will be displayed in the
+    # right admin sidebar just above the filter options
     title = "reservation expired"
 
-    # Parameter for the filter that will be used in the URL query.
+    # parameter for the filter that will be used in the URL query
     parameter_name = "expired"
 
     def lookups(self, request, model_admin):
@@ -90,6 +100,10 @@ class ReservationExpiredListFilter (admin.SimpleListFilter):
 
 @admin.register(Book)
 class BookAdmin(DjangoObjectActions, admin.ModelAdmin):
+    """Book admin allowing management of stock, kiosk system, home page,
+    data import and filtering of stock items from the changelist, as well as
+    data editing, cover image management, book copy management, and reservation
+    management from the detail view."""
     actions = ["download_image", "add_featured", "remove_featured", csvexport]
     search_fields = ["isbn__exact", "edition_id__iexact", "work_id__iexact", "title"]
     autocomplete_fields = ["authors"]
@@ -124,7 +138,15 @@ class BookAdmin(DjangoObjectActions, admin.ModelAdmin):
 
     @admin.action(description="Download image(s) from cover_url")
     def download_image(self, request, queryset):
+        """Download image from the url in the selected books' cover_url fields and
+        store the file in their cover_file fields."""
+
+        # initialise image download counter
         images_downloaded = 0
+
+        # loop through every selected book, check if it has a cover_url but not
+        # a downloaded cover_file, and if so download the image into a temporary file
+        # and save it to the cover_file field
         for obj in queryset:
             if obj.cover_url and not obj.cover_file:
                 img_temp = NamedTemporaryFile(delete=True)
@@ -132,6 +154,8 @@ class BookAdmin(DjangoObjectActions, admin.ModelAdmin):
                 img_temp.flush()
                 obj.cover_file.save(obj.pk, File(img_temp))
                 images_downloaded += 1
+
+        # send a success message detailing how many images were successfully downloaded
         self.message_user(
             request,
             ngettext(
@@ -145,11 +169,13 @@ class BookAdmin(DjangoObjectActions, admin.ModelAdmin):
 
     @admin.action(description="Add book(s) to featured")
     def add_featured(self, request, queryset):
+        """Add selected books to the featured list on the home page."""
         queryset.update(featured=True)
         self.message_user(request, "Book(s) added to featured", messages.SUCCESS)
 
     @admin.action(description="Remove book(s) from featured")
     def remove_featured(self, request, queryset):
+        """Remove selected books from the featured list on the home page."""
         queryset.update(featured=False)
         self.message_user(request, "Book(s) removed from featured", messages.SUCCESS)
 
@@ -159,6 +185,11 @@ class BookAdmin(DjangoObjectActions, admin.ModelAdmin):
         "cover_file if necessary",
     )
     def download_single_image(self, request, obj):
+        """Download image from the url in the current book's cover_url field and
+        store the file in its cover_file field (from the detail page)."""
+
+        # check if the book has a cover-Url, and if so download the
+        # image into a temporary file and save it to the cover_file field
         if obj.cover_url:
             img_temp = NamedTemporaryFile(delete=True)
             img_temp.write(urlopen(obj.cover_url).read())
@@ -176,10 +207,12 @@ class BookAdmin(DjangoObjectActions, admin.ModelAdmin):
         description="Search ISBN on Amazon to get book information",
     )
     def search_on_amazon(self, request, obj):
+        """Search the book on amazon so as to easily find metadata, cover image, etc."""
         return HttpResponseRedirect(f"https://www.amazon.co.uk/s?k={obj.isbn}")
 
     @action(label="Import book", description="Import book from ISBN")
     def import_book(self, request, queryset):
+        """Open the book import page."""
         return HttpResponseRedirect(reverse("import_book"))
 
     @action(
@@ -187,11 +220,16 @@ class BookAdmin(DjangoObjectActions, admin.ModelAdmin):
         description="Activate this device as a kiosk for the day",
     )
     def activate_kiosk(self, request, queryset):
+        """Activate the kiosk and log this user out by redirecting them to the
+        kisok activation view."""
         return HttpResponseRedirect(reverse("activate_kiosk"))
 
 
 @admin.register(BookCopy)
 class BookCopyAdmin(DjangoObjectActions, admin.ModelAdmin):
+    """Book copy admin allowing viewing info on and filtering of stock items from 
+    the changelist, as well as data editing, current loan management, loan history
+    information, and reservation management from the detail view."""
     search_fields = [
         "book__title__icontains",
         "book__isbn__exact",
@@ -236,7 +274,15 @@ class BookCopyAdmin(DjangoObjectActions, admin.ModelAdmin):
 
     @action
     def renew_loan(self, request, obj, force=False):
+        """Renew a loan using the method built in to the loan model class, which
+        checks if the user has hit their loan limit. If they have, a loan renewal
+        can be forced by passing a True value to the force argument."""
+
+        # Ensure the book is actually on loan, showing an error message if not
         if hasattr(obj, "current_loan"):
+            # Attempt to renew it, checking for if the book has hit the max number
+            # of renewals and then either showing an error message or saving the
+            # changes and showing a success message
             try:
                 obj.current_loan.renew(force=force)
             except MaxRenewalsError:
@@ -271,6 +317,8 @@ class BookCopyAdmin(DjangoObjectActions, admin.ModelAdmin):
 
 @admin.register(Author)
 class AuthorAdmin(admin.ModelAdmin):
+    """Author admin allowing viewing info on and filtering of stock items from
+    the changelist, as well as basic data editing from the detail view."""
     actions = [csvexport]
     search_fields = ["id__iexact", "name"]
     list_display = ["id", "name", "num_titles"]
@@ -282,6 +330,10 @@ class AuthorAdmin(admin.ModelAdmin):
 
 @admin.register(Reservation)
 class ReservationAdmin(DjangoObjectActions, admin.ModelAdmin):
+    """Reservation admin allowing management of reservations, filtering of existing
+    reservations, and management of book locations (i.e. on the shelves or not) from
+    the changelist, as well as data editing, assigning available book copies, and
+    turning a reservation into a loan when a user comes to collect it."""
     actions = ["mark_off_shelves", csvexport]
     search_fields = [
         "id__iexact",
@@ -329,6 +381,9 @@ class ReservationAdmin(DjangoObjectActions, admin.ModelAdmin):
 
     @admin.action(description="Mark book(s) as having been taken off the shelves")
     def mark_off_shelves(self, request, queryset):
+        """Allow librarians to keep track of when they have taken books off the
+        shelves through an object action that can be called on any selected
+        objects."""
         queryset.update(off_shelves=True)
         self.message_user(
             request,
@@ -341,7 +396,17 @@ class ReservationAdmin(DjangoObjectActions, admin.ModelAdmin):
         description="Assign book copy to reservation if it doesn't already have one",
     )
     def assign_book_copy(self, request, obj):
+        """Checks if there is a book copy available and that the selected reservation
+        doesn't already have one, then assigns that copy to it. Shouldn't generally have
+        to be used, as reservations are automatically assigned book copies if available
+        when they are created and a check if performed every time a book is returned to
+        see if there are any outstanding reservations for it."""
+        # calls the function defined on the model class to carry out the logic
+        # described above
         result = obj.assign_book_copy()
+
+        # checks the result of the above functions call and sends a sensible status
+        # message to let the librarian know what has happened
         if result is not None:
             obj.save()
             if result:
@@ -365,18 +430,29 @@ class ReservationAdmin(DjangoObjectActions, admin.ModelAdmin):
         "deleting the reservation",
     )
     def turn_into_loan(self, request, obj):
+        """Allows the reservation to easily be turned into a loan by a librarian when
+        the user comes to collect the book (otherwise the reservation would have to
+        be deleted and then the loan created because the reservation marks the book
+        copy as being generally inaccessible for loans)."""
+
+        # create a loan from the reservation and attempt to save it, displaying an error
+        # message if the user has already reached their loan limit or if there has been
+        # an error and the book is somehow already on laoan/reserved by someone else
         loan = Loan(user=obj.user, book=obj.copy)
         try:
             loan.save(ignore_unavailable=True)
         except MaxLoansError:
             self.message_user(request, "Max loans already reached.", messages.WARNING)
-        except BookUnavailableError:
+        except BookUnavailableError: # should never happen but included to be safe
             self.message_user(
                 request,
                 "This book is either already on loan or reserved.",
                 messages.WARNING,
             )
         else:
+            # if there wasn't a problem with saving the loan, delets the reservation and
+            # shows a success message before redirecting to the admin page for the
+            # book copy that was just created (which will show the loan information)
             obj.delete()
             self.message_user(
                 request,
@@ -389,10 +465,11 @@ class ReservationAdmin(DjangoObjectActions, admin.ModelAdmin):
             )
 
 
+# register the user model with Django's built-in model admin that allows passwords to
+# be reset, account information viewed in a sensible manner, etc.
 admin.site.register(LibraryUser, UserAdmin)
 
-# TODO: NEED TO HAVE AT LEAST BASIC REPORTS
-
+# set basic customisation/branding options for the admin
 admin.site.site_header = "Librarian/Volunteer System"
 admin.site.site_title = "LMS"
 admin.site.index_title = "Management"

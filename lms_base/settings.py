@@ -29,7 +29,6 @@ ALLOWED_HOSTS = ["localhost"]
 CSRF_TRUSTED_ORIGINS = []
 
 # Application definition
-
 INSTALLED_APPS = [
     "lms.apps.LmsConfig",
     "django.contrib.admin",
@@ -94,7 +93,6 @@ DATABASES = {
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -107,7 +105,7 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     # {
-    #     "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    #    "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     # },
 ]
 
@@ -120,23 +118,20 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
-
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-AUTH_USER_MODEL = "lms.LibraryUser"
-
-# Other
-LOGOUT_REDIRECT_URL = "/"
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Media
 # https://docs.djangoproject.com/en/4.1/ref/settings/#std-setting-MEDIA_ROOT
 MEDIA_ROOT = "C:\\Users\\matth\\PycharmProjects\\lms\\backend\\uploads"
 MEDIA_URL = "uploads/"
+
+# Other
+AUTH_USER_MODEL = "lms.LibraryUser"
+LOGOUT_REDIRECT_URL = "/"
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
