@@ -19,13 +19,15 @@ from .models import LibraryUser, Author, Book, BookCopy, Loan, Reservation, Hist
 class BookCopyInline(admin.TabularInline):
     """Inline book copy admin inline allowing information on existing book copies to
     be displayed inline."""
+
     model = BookCopy
     extra = 0
 
 
 class LoanInline(admin.StackedInline):
     """Inline loan admin allowing info on a single loan (including due dates/renewals)
-     to be viewed and loans managed."""
+    to be viewed and loans managed."""
+
     model = Loan
     autocomplete_fields = ["user"]
     fields = ["user", "loan_date", "renewal_date", "renewals", "due_date"]
@@ -40,6 +42,7 @@ class LoanInline(admin.StackedInline):
 class HistoryLoanInline(admin.StackedInline):
     """Inline history loan admin allowing the loan history of a book copy to be
     displayed inline on its model admin."""
+
     model = HistoryLoan
     fields = ["user", "loan_date", "returned_date"]
     readonly_fields = ["user", "loan_date", "returned_date"]
@@ -47,17 +50,19 @@ class HistoryLoanInline(admin.StackedInline):
 
 
 class ReservationInline(admin.StackedInline):
-    """Inline reservation admin allowing information on a book outsanding reservations
+    """Inline reservation admin allowing information on a book outstanding reservations
     and a book copy's existing reservation to be shown."""
+
     model = Reservation
     autocomplete_fields = ["user"]
     fields = ["user", "ready_since", "off_shelves"]
     extra = 0
 
 
-class ReservationExpiredListFilter (admin.SimpleListFilter):
+class ReservationExpiredListFilter(admin.SimpleListFilter):
     """Custom list filter for reservation admin changelist to check if the reservations
     are expired or not."""
+
     # human-readable title which will be displayed in the
     # right admin sidebar just above the filter options
     title = "reservation expired"
@@ -104,6 +109,7 @@ class BookAdmin(DjangoObjectActions, admin.ModelAdmin):
     data import and filtering of stock items from the changelist, as well as
     data editing, cover image management, book copy management, and reservation
     management from the detail view."""
+
     actions = ["download_image", "add_featured", "remove_featured", csvexport]
     search_fields = ["isbn__exact", "edition_id__iexact", "work_id__iexact", "title"]
     autocomplete_fields = ["authors"]
@@ -221,15 +227,16 @@ class BookAdmin(DjangoObjectActions, admin.ModelAdmin):
     )
     def activate_kiosk(self, request, queryset):
         """Activate the kiosk and log this user out by redirecting them to the
-        kisok activation view."""
+        kiosk activation view."""
         return HttpResponseRedirect(reverse("activate_kiosk"))
 
 
 @admin.register(BookCopy)
 class BookCopyAdmin(DjangoObjectActions, admin.ModelAdmin):
-    """Book copy admin allowing viewing info on and filtering of stock items from 
+    """Book copy admin allowing viewing info on and filtering of stock items from
     the changelist, as well as data editing, current loan management, loan history
     information, and reservation management from the detail view."""
+
     search_fields = [
         "book__title__icontains",
         "book__isbn__exact",
@@ -319,6 +326,7 @@ class BookCopyAdmin(DjangoObjectActions, admin.ModelAdmin):
 class AuthorAdmin(admin.ModelAdmin):
     """Author admin allowing viewing info on and filtering of stock items from
     the changelist, as well as basic data editing from the detail view."""
+
     actions = [csvexport]
     search_fields = ["id__iexact", "name"]
     list_display = ["id", "name", "num_titles"]
@@ -334,6 +342,7 @@ class ReservationAdmin(DjangoObjectActions, admin.ModelAdmin):
     reservations, and management of book locations (i.e. on the shelves or not) from
     the changelist, as well as data editing, assigning available book copies, and
     turning a reservation into a loan when a user comes to collect it."""
+
     actions = ["mark_off_shelves", csvexport]
     search_fields = [
         "id__iexact",
@@ -437,21 +446,21 @@ class ReservationAdmin(DjangoObjectActions, admin.ModelAdmin):
 
         # create a loan from the reservation and attempt to save it, displaying an error
         # message if the user has already reached their loan limit or if there has been
-        # an error and the book is somehow already on laoan/reserved by someone else
+        # an error and the book is somehow already on loan/reserved by someone else
         loan = Loan(user=obj.user, book=obj.copy)
         try:
             loan.save(ignore_unavailable=True)
         except MaxLoansError:
             self.message_user(request, "Max loans already reached.", messages.WARNING)
-        except BookUnavailableError: # should never happen but included to be safe
+        except BookUnavailableError:  # should never happen but included to be safe
             self.message_user(
                 request,
                 "This book is either already on loan or reserved.",
                 messages.WARNING,
             )
         else:
-            # if there wasn't a problem with saving the loan, delets the reservation and
-            # shows a success message before redirecting to the admin page for the
+            # if there wasn't a problem with saving the loan, deletes the reservation
+            # and shows a success message before redirecting to the admin page for the
             # book copy that was just created (which will show the loan information)
             obj.delete()
             self.message_user(

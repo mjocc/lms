@@ -20,7 +20,6 @@ from django.urls import include, path
 urlpatterns = [
     # lms
     path("", include("lms.urls")),
-
     # primary admin site items
     path("admin/doc/", include("django.contrib.admindocs.urls")),
     path("admin/", admin.site.urls),

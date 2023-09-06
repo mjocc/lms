@@ -50,6 +50,7 @@ class LibraryUser(AbstractUser):
     def __str__(self):
         return f"{self.get_full_name()} ({self.username})"
 
+
 # define common defaults for OpenLibrary ID fields to be validated off of
 ol_id_field = dict(
     max_length=20,
@@ -458,10 +459,10 @@ class Reservation(models.Model):
 
 class HistoryLoan(models.Model):
     user = models.ForeignKey(
-        LibraryUser, on_delete=models.PROTECT, related_name="loan_history"
+        LibraryUser, on_delete=models.SET_NULL, related_name="loan_history", null=True
     )
     book = models.ForeignKey(
-        BookCopy, on_delete=models.PROTECT, related_name="loan_history"
+        BookCopy, on_delete=models.CASCADE, related_name="loan_history"
     )
     loan_date = models.DateField(help_text="date the loan began")
     returned_date = models.DateField(

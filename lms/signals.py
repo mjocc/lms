@@ -10,8 +10,9 @@ def handle_reservation_delete(sender, instance, **kwargs):
     deleted."""
 
     # get reservation that has been waiting the longest for a book (the 'first')
-    reservation = Reservation.objects.filter(copy__isnull=True,
-                                             book=instance.book).first()
+    reservation = Reservation.objects.filter(
+        copy__isnull=True, book=instance.book
+    ).first()
 
     # manually assign the book copy of the reservation that was just deleted
     # to an outstanding reservation if found and save it
