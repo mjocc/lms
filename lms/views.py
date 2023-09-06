@@ -174,6 +174,7 @@ class SearchView(ListView):
     """Render the search results template with either book or author objects
     (depending on the path the request is sent to) and showing objects that
     match the results of a search using the query specified."""
+
     template_name = "lms/main/search_results.html"
     model = Book
 
@@ -483,6 +484,7 @@ class UserRegistrationView(FormView):
     registration form that only allows entry of username and password. Provides
     custom submission logic to automatically generate a library card number as the
     username, ensuring that the library card number is unique to that user."""
+
     form_class = LibraryUserCreationForm
     template_name = "lms/main/user_registration.html"
     success_url = reverse_lazy("user_profile")
