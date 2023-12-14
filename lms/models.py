@@ -204,6 +204,8 @@ class Book(models.Model):
             img_temp = NamedTemporaryFile(delete=True)
             img_temp.write(urlopen(cover_url).read())
             img_temp.flush()
+        # code above adapted from https://stackoverflow.com/questions/5691129/save- \
+        #   image-from-url-in-django-and-checking-if-it%C2%B4s-an-image
 
         # create the book object
         book = Book.objects.create(
